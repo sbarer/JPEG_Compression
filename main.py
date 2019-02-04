@@ -47,6 +47,7 @@ def chroma_ss_process(img):
     pixels = img.load()
     #find chroma block size 
     #chroma_blocksize = (width * height) / 8 
+    #Try resizing image N x N -> M x M where M < N
 
     for i in range(width):
         for j in range(height):
@@ -97,10 +98,10 @@ def main():
     ###CHROMOSUBSAMPLING
     ## How do to the 4:2:0 subsampling 
 
-    img = Image.fromarray(block, 'RGB')
+    #img = Image.fromarray(block, 'RGB')
     print(block_seg)
-    img.show()
-    #ss_image.show()
+    #img.show()
+    ss_image.show()
 
 
 
