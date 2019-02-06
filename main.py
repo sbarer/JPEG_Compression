@@ -28,6 +28,21 @@ def rgb_to_yuv(file_path):
     width = img.size[0]
     height = img.size[1]
 
+    #RESIZE IMAGE IF IT IS not a scalar multiple of 8x8 
+
+    if(width%8 != 0 or height%8 !=0):
+        #Splice original image
+        width_padding = width%8
+        height_padding = height%8
+        allpix = np.array(img, dtype=np.uint8)
+        temp = allpix[0:width-width_padding:1, 0:height-height_padding:1]
+        #load spliced image into pixeldata
+        image = Image.fromarray(temp,'RGB')
+        pixels = image.load()
+        width = image.size[0]
+        height = image.size[1]
+
+
     #RGB -> YUV conversion 
     for i in range(width):
         for j in range(height):
@@ -40,50 +55,61 @@ def rgb_to_yuv(file_path):
             pixels[i,j] = (int(y),int(u),int(v))
     return img
 
+#Recover UV values using single pass
+#WORK ON THIS
+def recover_uv(npmat):
+
+
+    return 'To be implemented soon!' + npmat
+
+
+
+
 #applys a 4:2:0 chroma subsampling to image
 def chroma_ss_process(img):
     width = img.size[0]
     height = img.size[1]
     pixels = img.load()
     #find chroma block size 
-    #chroma_blocksize = (width * height) / 8 
-    #Try resizing image N x N -> M x M where M < N
 
-    for i in range(width):
-        for j in range(height):
-            if(i%2==0):
-                pixels[i,j] = pixels[i,j][0]
+    for i in range(height):
+        for j in range(width):
+            if (i%2==0 and j%2==0):
+                #Keep all channels
+                pass
             else:
-                if(j%2==0):
-                    pass
-                else:
-                    #EMPTY value 
-                    pixels[i,j] = 0
+                pixels[i,j] = pixels[i,j][0]
     
     return img
+            
 
 def main():
     input , output = file_inputs()
     print("input file name = " + str(input))
     print("output file name = " + str(output))
 
-    
+    #Image should be converted to YUV and resized to fit 8x8 blocks
     image = rgb_to_yuv(input)
+
+    #returns image into 3 different arrays corresponding to Y U V and subsequent downsampling
+
     ss_image = chroma_ss_process(image)
     
+    #Create a 2D matrix from subsampling. Numpy Matrix multiplication will be used here because
+    #it is more efficient in terms of computation and space. Compression will be implemented on array
+    #Then the final decompressed array will be the vector values for the image to be rendered. 
     npmat = np.array(ss_image, dtype=np.uint8)
 
     rows, cols = npmat.shape[0], npmat.shape[1]
     print("rows = " + str(rows))
     print("cols = " + str(cols))
     
-    #Create block sizes 
-    if(rows%8 ==0 and cols%8==0):
-        block_seg = (rows * cols) /64
-    else:
-        raise ValueError(("the width and height of the image "
-                          "should both be mutiples of 8"))
     
+                
+
+
+
+
     #Iterate through array in an 8x8 block 
     for i in range(0, rows, 8):
         for j in range(0, cols, 8):
@@ -92,14 +118,16 @@ def main():
                     pass
                 else:
                     #scale data to center around 0
-                    block = npmat[i:i+8, j:j+8, k] - 128
+                    #Make sure to add padding to image i.e width/height % 8 != 0 
+                    #block = npmat[i:i+8, j:j+8, k] - 128
+                    pass
         
         
     ###CHROMOSUBSAMPLING
     ## How do to the 4:2:0 subsampling 
 
     #img = Image.fromarray(block, 'RGB')
-    print(block_seg)
+    #print(block)
     #img.show()
     ss_image.show()
 
