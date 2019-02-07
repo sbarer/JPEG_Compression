@@ -66,21 +66,39 @@ def recover_uv(npmat):
 
 
 #applys a 4:2:0 chroma subsampling to image
+#returns 3 2D arrays corresponding to YUV
+#FORMAT: pixels[width, height] np.array[height, width]
 def chroma_ss_process(img):
     width = img.size[0]
     height = img.size[1]
     pixels = img.load()
     #find chroma block size 
-
+    y = np.zeros((height,width), dtype=np.uint8)
+    u = np.zeros((height/2,width/2), dtype=np.uint8)
+    v = np.zeros((height/2,width/2), dtype=np.uint8)
+    
     for i in range(height):
         for j in range(width):
             if (i%2==0 and j%2==0):
-                #Keep all channels
-                pass
+                y[i,j] = pixels[j,i][0]
+                u[i/2,j/2] = pixels[j,i][1]
+                v[i/2,j/2] = pixels[j,i][2]
             else:
-                pixels[i,j] = pixels[i,j][0]
+                y[i,j] = pixels[j,i][0]
+
+    #trim padding to make array a multiple of 8
+    u_height, u_width = u.shape[0], u.shape[1]
+    v_height, v_width = v.shape[0], v.shape[1]
+
+    if(u_width % 8 != 0 or u_height % 8 != 0):
+        width_padding = u_width % 8
+        height_padding = u_height % 8
+        u = u[0:u_height - height_padding:1, 0:u_width - width_padding:1]
+        v = v[0:v_height - height_padding:1, 0:v_width - width_padding:1]
+
+    return y,u,v
     
-    return img
+    
             
 
 def main():
@@ -92,29 +110,26 @@ def main():
     image = rgb_to_yuv(input)
 
     #returns image into 3 different arrays corresponding to Y U V and subsequent downsampling
-
-    ss_image = chroma_ss_process(image)
+    y,u,v = chroma_ss_process(image)
     
     #Create a 2D matrix from subsampling. Numpy Matrix multiplication will be used here because
     #it is more efficient in terms of computation and space. Compression will be implemented on array
     #Then the final decompressed array will be the vector values for the image to be rendered. 
-    npmat = np.array(ss_image, dtype=np.uint8)
 
-    rows, cols = npmat.shape[0], npmat.shape[1]
+    rows, cols = y.shape[0], y.shape[1]
+    uv_rows, uv_cols = u.shape[0], u.shape[1]
     print("rows = " + str(rows))
     print("cols = " + str(cols))
     
-    
-                
-
-
-
+    #Block count. all 3 arrays should have dimensions that are multiples of 8x8
+    y_blockcount = (rows * cols) /64
+    uv_blockcount =  (uv_rows * uv_cols) /64
 
     #Iterate through array in an 8x8 block 
     for i in range(0, rows, 8):
         for j in range(0, cols, 8):
             for k in range(3):
-                if(len(npmat[i,j]==1)):
+                if(len(y[i,j]==1)):
                     pass
                 else:
                     #scale data to center around 0
@@ -129,7 +144,7 @@ def main():
     #img = Image.fromarray(block, 'RGB')
     #print(block)
     #img.show()
-    ss_image.show()
+    #ss_image.show()
 
 
 
