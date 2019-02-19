@@ -142,7 +142,7 @@ def initialize_Q_LUM():
 
     return lum
 
-def initialize_Q_CHROME:
+def initialize_Q_CHROME():
     chrome = np.array([[17, 18, 24, 47, 99, 99, 99, 99],
                        [18, 21, 26, 66, 99, 99, 99, 99],
                        [24, 26, 56, 99, 99, 99, 99, 99],
@@ -155,7 +155,12 @@ def initialize_Q_CHROME:
     return chrome
 
 
-def Quantize(comp, Q):
+def Quantize(comp, r, c, Q):
+    FQ = np.empty([r,c])
+    for i in range(0, r, 1):
+        for j in range(0, c, 1):
+            FQ[i, j] = comp[i, j] / Q[i, j]
+
     FQ = round(comp / Q)
 
     return FQ
@@ -197,9 +202,9 @@ def main():
     Q_matrix_LUM = initialize_Q_LUM()
     Q_matrix_CHROME = initialize_Q_CHROME()
 
-    FQy = Quantize(Fy, Q_matrix_LUM)
-    FQu = Quantize(Fu, Q_matrix_CHROME)
-    FQv = Quantize(Fv, Q_matrix_CHROME)
+    FQy = Quantize(Fy, rows, cols, Q_matrix_LUM)
+    FQu = Quantize(Fu, uv_rows, uv_cols, Q_matrix_CHROME)
+    FQv = Quantize(Fv, uv_rows, uv_cols, Q_matrix_CHROME)
 
 
 
