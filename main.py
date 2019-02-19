@@ -16,8 +16,8 @@ def file_inputs():
     # parse through arguments and put into arg
     args = parser.parse_args()
 
-    input_file = args.input_file_path
-    output_file = args.output_file_path
+    input_file_path = args.input_file
+    output_file_path = args.output_file
 
 
     return input_file_path, output_file_path
