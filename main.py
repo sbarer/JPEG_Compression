@@ -136,8 +136,8 @@ def main():
                     #Make sure to add padding to image i.e width/height % 8 != 0 
                     #block = npmat[i:i+8, j:j+8, k] - 128
                     pass
-        
-        
+    
+                            
     ###CHROMOSUBSAMPLING
     ## How do to the 4:2:0 subsampling 
 
