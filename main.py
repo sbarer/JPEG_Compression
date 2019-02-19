@@ -1,49 +1,51 @@
 
-import argparse
 from PIL import Image
 import numpy as np
 import math
-#To grab arguments from input
+# To grab arguments from input
 
 def file_inputs():
+
     import argparse
-    #Calls an instance of the argument Parser
+    # Calls an instance of the argument Parser
     parser = argparse.ArgumentParser(description = 'Process input file path and export file path')
-    #add arguments for input file and output file
-    #Positional Arguments
+    # add arguments for input file and output file
+    # Positional Arguments
     parser.add_argument('input_file', type=str, help='relative path to the input image from current directory')
     parser.add_argument('output_file', type=str, help='relative path to the input image from current directory')
-    #parse through arguments and put into arg
+    # parse through arguments and put into arg
     args = parser.parse_args()
 
-    input_file = args.input_file
-    output_file = args.output_file
-    return input_file, output_file
+    input_file = args.input_file_path
+    output_file = args.output_file_path
 
-#Takes an image in file_path and retuns image with rgb->yuv pixel value conversion
+
+    return input_file_path, output_file_path
+
+# Takes an image in file_path and retuns image with rgb->yuv pixel value conversion
 def rgb_to_yuv(file_path):
     img = Image.open(file_path)
-    pixels = img.load() #Create Pixel map
+    pixels = img.load()  # Create Pixel map
 
     width = img.size[0]
     height = img.size[1]
 
-    #RESIZE IMAGE IF IT IS not a scalar multiple of 8x8
+    # RESIZE IMAGE IF IT IS not a scalar multiple of 8x8
 
-    if (width%8 != 0 or height%8 !=0):
-        #Splice original image
+    if (width % 8 != 0 or height % 8 !=0):
+        # Splice original image
         width_padding = width%8
         height_padding = height%8
         allpix = np.array(img, dtype=np.uint8)
         temp = allpix[0:width-width_padding:1, 0:height-height_padding:1]
-        #load spliced image into pixeldata
+        # load spliced image into pixeldata
         image = Image.fromarray(temp, 'RGB')
         pixels = image.load()
         width = image.size[0]
         height = image.size[1]
 
 
-    #RGB -> YUV conversion
+    # RGB -> YUV conversion
     for i in range(width):
         for j in range(height):
             r = pixels[i, j][0]
@@ -55,8 +57,8 @@ def rgb_to_yuv(file_path):
             pixels[i,j] = (int(y),int(u),int(v))
     return img
 
-#Recover UV values using single pass
-#WORK ON THIS
+# Recover UV values using single pass
+# WORK ON THIS
 def recover_uv(npmat):
 
 
@@ -65,28 +67,31 @@ def recover_uv(npmat):
 
 
 
-#applys a 4:2:0 chroma subsampling to image
-#returns 3 2D arrays corresponding to YUV
-#FORMAT: pixels[width, height] np.array[height, width]
+# applys a 4:2:0 chroma subsampling to image
+# returns 3 2D arrays corresponding to YUV
+# FORMAT: pixels[width, height] np.array[height, width]
 def chroma_ss_process(img):
     width = img.size[0]
     height = img.size[1]
     pixels = img.load()
-    #find chroma block size
+    # find chroma block size
     y = np.zeros((height, width), dtype=np.uint8)
-    u = np.zeros((height/2, width/2), dtype=np.uint8)
-    v = np.zeros((height/2, width/2), dtype=np.uint8)
+    h = height // 2
+    w = width // 2
+    print(h, w)
+    u = np.zeros((h, w), dtype=np.uint8)
+    v = np.zeros((h, w), dtype=np.uint8)
 
     for i in range(height):
         for j in range(width):
-            if (i%2 == 0 and j%2==0):
+            if (i % 2 == 0 and j % 2==0):
                 y[i, j] = pixels[j, i][0]
-                u[i/2, j/2] = pixels[j, i][1]
-                v[i/2, j/2] = pixels[j, i][2]
+                u[i//2, j//2] = pixels[j, i][1]
+                v[i//2, j//2] = pixels[j, i][2]
             else:
                 y[i, j] = pixels[j, i][0]
 
-    #trim padding to make array a multiple of 8
+    # trim padding to make array a multiple of 8
     u_height, u_width = u.shape[0], u.shape[1]
     v_height, v_width = v.shape[0], v.shape[1]
 
@@ -111,11 +116,11 @@ def initialize_DCT_matrix():
 
     return matrix
 
-def DCT(comp, r, c, T):
+def DCT(comp, r, c, T, Q):
     # initialize T transpose from T
     TT = np.transpose(T)
     # create new array for DCT'd values
-    Fcomp = np.empty([r,c])
+    FQcomp = np.empty([r,c])
 
     # iterate through comp in 8x8 blocks
     for i in range(0, r-8, 8):
@@ -125,10 +130,13 @@ def DCT(comp, r, c, T):
             # apply DCT algorithm to 8x8 block
             Fblock = T * block * TT
 
-            # add block to Fcomp matrix
-            Fcomp[i:i + 8, j:j + 8] = Fblock
+            # Apply Quantization to block
+            FQ = block / Q
 
-    return Fcomp
+            # add block to FQcomp matrix
+            FQcomp[i:i + 8, j:j + 8] = Fblock
+
+    return FQcomp
 
 def initialize_Q_LUM():
     lum = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
@@ -155,15 +163,6 @@ def initialize_Q_CHROME():
     return chrome
 
 
-def Quantize(comp, r, c, Q):
-    FQ = np.empty([r,c])
-    for i in range(0, r, 1):
-        for j in range(0, c, 1):
-            FQ[i, j] = comp[i, j] / Q[i, j]
-
-    FQ = round(comp / Q)
-
-    return FQ
 
 
 def main():
@@ -177,61 +176,36 @@ def main():
     # 2 - Split YUV into Y U V and subsequent downsampling
     y, u, v = chroma_ss_process(image)
 
-    #Create a 2D matrix from subsampling. Numpy Matrix multiplication will be used here because
-    #it is more efficient in terms of computation and space. Compression will be implemented on array
-    #Then the final decompressed array will be the vector values for the image to be rendered.
+    # Create a 2D matrix from subsampling. Numpy Matrix multiplication will be used here because
+    # it is more efficient in terms of computation and space. Compression will be implemented on array
+    # Then the final decompressed array will be the vector values for the image to be rendered.
 
-    # 3 - Calculate dimensions of Y U V
+    # 3 - Calculate dimensions of Y U V and Confirm all arrays are divisible by 8
     rows, cols = y.shape[0], y.shape[1]
     uv_rows, uv_cols = u.shape[0], u.shape[1]
     print("rows = " + str(rows))
     print("cols = " + str(cols))
 
-    # Confirm all arrays are divisible by 8
     y_blockcount = (rows * cols) / 64
     uv_blockcount = (uv_rows * uv_cols) / 64
 
-    # 4 - DCT
+    # 4 - DCT and Quantization
     DCT_matrix = initialize_DCT_matrix()
-
-    Fy = DCT(y, rows, cols, DCT_matrix)
-    Fu = DCT(u, uv_rows, uv_cols, DCT_matrix)
-    Fv = DCT(v, uv_rows, uv_cols, DCT_matrix)
-
-    # 5 - Quantization
     Q_matrix_LUM = initialize_Q_LUM()
     Q_matrix_CHROME = initialize_Q_CHROME()
 
-    FQy = Quantize(Fy, rows, cols, Q_matrix_LUM)
-    FQu = Quantize(Fu, uv_rows, uv_cols, Q_matrix_CHROME)
-    FQv = Quantize(Fv, uv_rows, uv_cols, Q_matrix_CHROME)
+    FQy = DCT(y, rows, cols, DCT_matrix, Q_matrix_LUM)
+    FQu = DCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+    FQv = DCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
 
 
-
-
-
-
-
-    #Iterate through array in an 8x8 block
-    for i in range(0, rows, 8):
-        for j in range(0, cols, 8):
-            for k in range(3):
-                if(len(y[i, j] == 1)):
-                    pass
-                else:
-                    #scale data to center around 0
-                    #Make sure to add padding to image i.e width/height % 8 != 0
-                    #block = npmat[i:i+8, j:j+8, k] - 128
-                    pass
-
-
-    ###CHROMOSUBSAMPLING
+    ### CHROMOSUBSAMPLING
     ## How do to the 4:2:0 subsampling
 
-    #img = Image.fromarray(block, 'RGB')
-    #print(block)
-    #img.show()
-    #ss_image.show()
+    # img = Image.fromarray(block, 'RGB')
+    # print(block)
+    # img.show()
+    # ss_image.show()
 
 
 
@@ -239,7 +213,7 @@ def main():
 
 
 
-#Checks to see if this is the main module being run
+# Checks to see if this is the main module being run
 if __name__ == '__main__':
     main()
 
