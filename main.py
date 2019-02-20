@@ -78,7 +78,6 @@ def chroma_ss_process(img):
     y = np.zeros((height, width), dtype=np.uint8)
     h = height // 2
     w = width // 2
-    print(h, w)
     u = np.zeros((h, w), dtype=np.uint8)
     v = np.zeros((h, w), dtype=np.uint8)
 
@@ -120,21 +119,35 @@ def DCT(comp, r, c, T, Q):
     # initialize T transpose from T
     TT = np.transpose(T)
     # create new array for DCT'd values
+    Fcomp = np.empty([r, c])
     FQcomp = np.empty([r,c])
 
     # iterate through comp in 8x8 blocks
-    for i in range(0, r-8, 8):
-        for j in range(0, c-8, 8):
-            block = comp[i:i+8, j:j+8]
+    for i in range(0, r-7, 8):
+        for j in range(0, c-7, 8):
+            block = comp[i:i+8][j:j+8]
 
             # apply DCT algorithm to 8x8 block
-            Fblock = T * block * TT
+            Fblock = np.matmul(T, block)
+            Fblock = np.matmul(block, TT)
+
+            # add block to Fcomp matrix
+            Fcomp[i:i + 8][j:j + 8] = Fblock
 
             # Apply Quantization to block
-            FQ = block / Q
+            Qblock = np.empty([8, 8])
+            for k in range (0, 8, 1):
+                for L in range(0, 8, 1):
+                    Qblock[k, L] = round(Fblock[k, L] / Q[k, L])
 
             # add block to FQcomp matrix
-            FQcomp[i:i + 8, j:j + 8] = Fblock
+            FQcomp[i:i + 8][j:j + 8] = Qblock
+
+    print("Fcomp")
+    print(Fcomp)
+
+    print("FQcomp")
+    print(FQcomp)
 
     return FQcomp
 
@@ -166,6 +179,7 @@ def initialize_Q_CHROME():
 
 
 def main():
+    np.set_printoptions(threshold=np.inf)
     input , output = file_inputs()
     print("input file name = " + str(input))
     print("output file name = " + str(output))
@@ -189,14 +203,26 @@ def main():
     y_blockcount = (rows * cols) / 64
     uv_blockcount = (uv_rows * uv_cols) / 64
 
+    test = [[200, 202, 189, 188, 189, 175, 175, 175],
+            [200, 203, 198, 188, 189, 182, 178, 175],
+            [203, 200, 200, 195, 200, 187, 185, 175],
+            [200, 200, 200, 200, 197, 187, 187, 187],
+            [200, 205, 200, 200, 195, 188, 187, 175],
+            [200, 200, 200, 200, 200, 190, 187, 175],
+            [205, 200, 199, 200, 191, 187, 187, 175],
+            [210, 200, 200, 200, 188, 185, 187, 186]]
+
     # 4 - DCT and Quantization
     DCT_matrix = initialize_DCT_matrix()
     Q_matrix_LUM = initialize_Q_LUM()
     Q_matrix_CHROME = initialize_Q_CHROME()
 
-    FQy = DCT(y, rows, cols, DCT_matrix, Q_matrix_LUM)
-    FQu = DCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
-    FQv = DCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+    # FQ_y = DCT(y, rows, cols, DCT_matrix, Q_matrix_LUM)
+    # FQ_u = DCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+    # FQ_v = DCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+
+    FQ_test = DCT(test, 8, 8, DCT_matrix, Q_matrix_LUM)
+
 
 
     ### CHROMOSUBSAMPLING
