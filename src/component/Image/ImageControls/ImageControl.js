@@ -1,15 +1,24 @@
-import React from 'react';
+import React, { Component } from 'react';
 
 import classes from './ImageControl.module.css';
 import Image from '../Image'
 
-const imageControl = ( props ) => (
-    <div className={classes.ImageControl}>
-        <Image imagePath='space.jpg' />
-        <Image imagePath='v_bridge.jpeg' />
-        <Image imagePath='vancouver-coast.jpg' />
-        <div>IMAGE 4</div>
-    </div>
-)
+class ImageControl extends Component{
+    render(){
+        let images = this.props.images.map((image)=>[
+             <Image 
+             imagePath={image.filePath} 
+             key={image.id}/>
+        ]);
+        console.log(images)
+        return(
+            <div className={classes.ImageControl}>
+                {images}
+            </div>
+        )
+    }
+} 
 
-export default imageControl;
+
+
+export default ImageControl;

@@ -9,7 +9,6 @@ const intro = ( props ) => (
         <p>Follow us on Instagram</p>
         <p>Pick a color and get started</p>
         <p>Compressing your Files hard and fast</p>
-        <button> Compress Image </button>
     </div>
 )
 
