@@ -1,0 +1,21 @@
+.Image{
+    align-items: center;
+    width: 800px;
+    height: 500px;
+    float:left;
+    justify-content: space-between;
+    border-style: double;
+}
+
+.Image h2{
+    visibility: hidden;
+}
+
+.Filesize{
+    display:inline;
+}
+
+
+.Image img{
+    margin-left: 20px;
+}

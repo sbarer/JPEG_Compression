@@ -1,0 +1,18 @@
+.Intro{
+    height:400px;
+    width:100%;
+    margin-top:50px;
+    background: linear-gradient( rgba(184, 61, 53, 0.6), rgba(100, 89, 211, 0.6)), url("../../assets/images/hotel_spot.jpg");
+    background-repeat: no-repeat;
+    background-size:cover;
+}
+
+.Intro h1{
+    padding-top:40px;
+    text-decoration: underline;
+}
+
+.Intro p{
+    color:white;
+    font-size: 1.5em;
+}
