@@ -1,0 +1,9 @@
+.ImageManager{
+    padding-top: 30px;
+    border: 1px black;
+    color:red;
+}
+
+.ImageManager div{
+    background-color: blue;
+}
