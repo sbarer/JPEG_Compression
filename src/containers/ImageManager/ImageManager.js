@@ -8,9 +8,9 @@ import CompressProcess from '../../component/Image/CompressProcess/CompressProce
 class ImageManager extends Component{
     state ={
         images : [
-            {id:'1', filePath:'space.jpg', compression:1, sizeBefore:0, sizeAfter:0},
-            {id:'2', filePath:'space.jpg', compression:2, sizeBefore:0, sizeAfter:0},
-            {id:'3', filePath:'hotel_spot.jpg', compression:3, sizeBefore:0, sizeAfter:0}
+            {id:'1', filePath:'space.jpg', compression:1, sizeBefore:56, sizeAfter:10},
+            {id:'2', filePath:'space.jpg', compression:2, sizeBefore:32, sizeAfter:20},
+            {id:'3', filePath:'hotel_spot.jpg', compression:3, sizeBefore:30, sizeAfter:20}
 
         ],
         active: false,
@@ -30,8 +30,9 @@ class ImageManager extends Component{
     
     currentCompressValHandler = ( event ) =>{
         const compressVal = event.target.value;
-        console.log(compressVal)
+        //console.log(compressVal)
         this.setState({currentCompressVal: compressVal});
+        //console.log(this.state.currentCompressVal)
     }
 
     removeImageHandler = ( imageIndex ) =>{
@@ -49,15 +50,20 @@ class ImageManager extends Component{
 
     //This will be a HTTP request for image compression later
     //Return: FILE SIZE- Before and After 
-    compressAndShowImage = () =>{
-        //TODO: Backend request
-        //fake for now...
-        //expect to recieve 2 values fileSize Before Compression and fileSize after
-        //JSON format 
+    compressAndShowImage = () =>{ 
         const images = [...this.state.images]
         const id = this.state.indexCount
         const filePath = this.state.currentImage;
-        const compression = this.state.currentCompressVals
+        const compression = this.state.currentCompressVal;
+        if(compression > 10){
+            alert('Please pick a scaling factor between 1-10');
+            return
+        }
+        //TODO: Backend request
+        //fake for now...
+        //expect to recieve 2 values fileSize Before Compression and fileSize after
+        //JSON format
+
         const fileSizeBefore = 10;
         const fileSizeAfter = 5;
         images.push({id:id, filePath:filePath, compression:compression,
@@ -70,7 +76,7 @@ class ImageManager extends Component{
                 imageProcessing:!prevState.imageProcessing
             }
         })
-
+        console.log(this.state.images)
 
         
     }

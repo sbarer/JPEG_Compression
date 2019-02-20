@@ -10,6 +10,9 @@ class App extends Component {
         <Layout>
           <ImageManager />
         </Layout>
+        <footer className={classes.Footer}>
+          <p>Copyright &copy;2018 Design by David Pham</p>
+        </footer>
       </div>
     );
   }

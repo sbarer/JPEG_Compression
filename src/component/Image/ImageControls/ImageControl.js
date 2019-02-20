@@ -6,7 +6,10 @@ import Image from '../Image'
 class ImageControl extends Component{
     render(){
         let images = this.props.images.map((image, index)=>[
-             <Image 
+             <Image
+             sizeBefore={image.sizeBefore} 
+             sizeAfter={image.sizeAfter}
+             compression={image.compression}
              imagePath={image.filePath} 
              key={image.id}
              click={()=>this.props.click(index)}/>

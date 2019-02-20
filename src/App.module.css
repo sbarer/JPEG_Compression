@@ -30,3 +30,16 @@
     transform: rotate(360deg);
   }
 }
+
+.Footer{
+  background-color:#8F5C2C;
+  color:#fff;
+  padding:10px;
+  width:100%;
+  height:50px;
+  position: relative;
+}
+
+.Footer p{
+  margin-top: 10px;
+}
