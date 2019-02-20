@@ -2,6 +2,7 @@ import React from 'react';
 
 import classes from './Image.module.css'
 import Aux from '../../hoc/Aux'
+import Button from '../UI/Button/Button'
 var images = require.context('../../assets/images', true);
 
 class ImageD extends React.Component {
@@ -15,8 +16,12 @@ class ImageD extends React.Component {
                 <img width='300px' height='300px' src={img_src} alt=""/>
                 <div className={classes.Filesize}>
                     <h1>File Size: </h1>
+                    <Button
+                    btnType='Danger'
+                    clicked={this.props.click}
+                    >REMOVE</Button>
                 </div>
-                
+
             </div>
             </Aux>
             

@@ -5,10 +5,11 @@ import Image from '../Image'
 
 class ImageControl extends Component{
     render(){
-        let images = this.props.images.map((image)=>[
+        let images = this.props.images.map((image, index)=>[
              <Image 
              imagePath={image.filePath} 
-             key={image.id}/>
+             key={image.id}
+             click={()=>this.props.click(index)}/>
         ]);
         console.log(images)
         return(
