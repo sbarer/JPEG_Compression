@@ -18,7 +18,8 @@ class ImageManager extends Component{
         indexCount:4,
         imageProcessing:false,
         currentImage: "",
-        currentCompressVal:1
+        currentCompressVal:1,
+        loadingImage:false,
     }
 
 
@@ -55,6 +56,7 @@ class ImageManager extends Component{
     //This will be a HTTP request for image compression later
     //Return: FILE SIZE- Before and After 
     compressAndShowImage = () =>{ 
+        this.setState({loadingImage:true})
         const images = [...this.state.images]
         const id = this.state.indexCount
         const filePath = this.state.currentImage;
@@ -82,7 +84,8 @@ class ImageManager extends Component{
                     return{
                         images:images,
                         indexCount:prevState.indexCount + 1,
-                        imageProcessing:!prevState.imageProcessing
+                        imageProcessing:!prevState.imageProcessing,
+                        loadingImage:false
                     }
                 })
                 console.log(this.state.images)
@@ -99,9 +102,11 @@ class ImageManager extends Component{
         return(
             <Aux>
                 <Modal
+                loadingImage={this.state.loadingImage}
                 show={this.state.imageProcessing}
                 cancel={this.toggleImageModal}>
                     <CompressProcess
+                    loadingImage={this.state.loadingImage}
                     currentImage={this.currentImageHandler}
                     cancel={this.toggleImageModal}
                     confirm={this.compressAndShowImage}
