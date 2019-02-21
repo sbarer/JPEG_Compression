@@ -5,6 +5,7 @@ import Aux from '../../hoc/Aux'
 import ImageControl from '../../component/Image/ImageControls/ImageControl';
 import Modal from '../../component/UI/Modal/Modal';
 import CompressProcess from '../../component/Image/CompressProcess/CompressProcess';
+import axios from 'axios';
 class ImageManager extends Component{
     state ={
         images : [
@@ -48,6 +49,9 @@ class ImageManager extends Component{
         this.setState({imageProcessing: !this.state.imageProcessing})
     }
 
+    //returns a JSON object with filesize before/after, filepath, etc
+    
+
     //This will be a HTTP request for image compression later
     //Return: FILE SIZE- Before and After 
     compressAndShowImage = () =>{ 
@@ -59,27 +63,38 @@ class ImageManager extends Component{
             alert('Please pick a scaling factor between 1-10');
             return
         }
-        //TODO: Backend request
-        //fake for now...
-        //expect to recieve 2 values fileSize Before Compression and fileSize after
-        //JSON format
 
-        const fileSizeBefore = 10;
-        const fileSizeAfter = 5;
-        images.push({id:id, filePath:filePath, compression:compression,
-            sizeBefore:fileSizeBefore, sizeAfter:fileSizeAfter});
-        
-        this.setState((prevState, props)=>{
-            return{
-                images:images,
-                indexCount:prevState.indexCount + 1,
-                imageProcessing:!prevState.imageProcessing
-            }
-        })
-        console.log(this.state.images)
+        const data = {
+            filePath: filePath,
+            compression:compression
+        }
 
+        axios.post('http://localhost:5000/compress', data).then(
+            (request) =>{
+                console.log(request);
+                console.log(request.data)
+                const fileSizeBefore = request.data.fileSizeBefore;
+                const fileSizeAfter = request.data.fileSizeAfter;
+                images.push({id:id, filePath:filePath, compression:compression,
+                    sizeBefore:fileSizeBefore, sizeAfter:fileSizeAfter});
+                
+                this.setState((prevState, props)=>{
+                    return{
+                        images:images,
+                        indexCount:prevState.indexCount + 1,
+                        imageProcessing:!prevState.imageProcessing
+                    }
+                })
+                console.log(this.state.images)
+                
+            }).catch(
+                (error) => {
+                    console.log(error)
+                }
+            )
         
     }
+
     render(){
         return(
             <Aux>
