@@ -1,0 +1,28 @@
+.ImageManager{
+    padding-top: 0px;
+    border: 1px black;
+    color:red;
+}
+
+.ImageManager div{
+    background-color: black;
+}
+
+.StartApp{
+    background-color: white;
+    margin:auto;
+    position: relative;
+    top:-60px;
+}
+
+.StartApp button{
+    background-color: #4CAF50; /* Green */
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    cursor: pointer;
+}
