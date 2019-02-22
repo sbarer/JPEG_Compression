@@ -4,10 +4,21 @@ import Button from '../../UI/Button/Button';
 
 class CompressProcess extends Component{
     render(){
+        let text = null;
+        if(this.props.loadingImage){
+            text = <h1>Loading Image...</h1>
+        }
+        else{
+            text = (
+                <div>
+                    <h3>Hello</h3>
+                    <p>Select the image you would like to compress</p>
+                </div>
+            )
+        }
         return(
             <Aux>
-                <h3>Hello</h3>
-                <p>Select the image you would like to compress</p>
+                {text}
                 <input type='text' onChange={this.props.currentImage}></input>
                 <br />
                 <p>Please select Quantization value (1-10)</p>
