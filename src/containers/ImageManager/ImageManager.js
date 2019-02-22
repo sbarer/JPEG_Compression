@@ -88,8 +88,7 @@ class ImageManager extends Component{
                         loadingImage:false
                     }
                 })
-                console.log(this.state.images)
-                
+                console.log(this.state.images) 
             }).catch(
                 (error) => {
                     console.log(error)

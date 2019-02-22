@@ -25,6 +25,7 @@ def compress():
     data['fileSizeAfter'] = 50
     json_data = json.dumps(data)
     return json_data
+    
 @app.route('/result')
 def result():
     return 'result to be implemented soon!'
