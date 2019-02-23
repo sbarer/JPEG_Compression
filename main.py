@@ -1,5 +1,6 @@
 
 from PIL import Image
+import numpy.matlib
 import numpy as np
 import math
 # To grab arguments from input
@@ -59,10 +60,38 @@ def rgb_to_yuv(file_path):
 
 # Recover UV values using single pass
 # WORK ON THIS
-def recover_uv(npmat):
+def recover_uv(matrix, r, c):
+    recover = np.empty([(2 * r), (2 * c)])
 
+    for a in range(0, (2 * r), 1):
+        for b in range(0, (2 * c), 1):
+            if a % 2 == 0 and b % 2 == 0:    # top left square
+                recover[a, b] = matrix[(a // 2)][(b // 2)]
 
-    return 'To be implemented soon!' + npmat
+            elif a % 2 == 1 and b % 2 == 1:  # bottom right square
+                if b == ((2 * r) - 1) and a == ((2 * r) - 1):   # last row, last column
+                    recover[a, b] = matrix[(a // 2) - 1][((b // 2) - 1)]
+                elif b == ((2 * r) - 1):  # last column, odd row
+                    recover[a, b] = np.mean(matrix[(a // 2) - 1][((b // 2) - 1)] + matrix[(a // 2) + 1][((b // 2) - 1)])
+                elif a == ((2 * r) - 1):  # last row, odd column
+                    recover[a, b] = np.mean(matrix[(a // 2) - 1][((b // 2) - 1)] + matrix[(a // 2) - 1][((b // 2) + 1)])
+                else:
+                    recover[a, b] = np.mean(np.mean(matrix[((a // 2) - 1)][((b // 2) - 1)] + matrix[((a // 2) + 1)][((b // 2) + 1)])
+                                        + np.mean(matrix[((a // 2) + 1)][((b // 2) - 1)] + matrix[((a // 2) - 1)][((b // 2) + 1)]))
+
+            elif a % 2 == 0 and b % 2 == 1:   # bottom left square
+                if a == ((2 * r) - 1):  # last row, even column
+                    recover[a, b] = matrix[(a // 2) - 1][(b // 2)]
+                else:
+                    recover[a, b] = np.mean(matrix[((a // 2) - 1)][(b // 2)] + matrix[((a // 2) + 1)][b // 2])
+
+            elif a % 2 == 1 and b % 2 == 0:   # top right square
+                if b == ((2 * r) - 1):  # last column, even row
+                    recover[a, b] = matrix[(a // 2)][((b // 2) - 1)]
+                else:
+                    recover[a, b] = np.mean(matrix[(a // 2)][((b // 2) - 1)] + matrix[(a // 2)][((b // 2) + 1)])
+
+    return recover
 
 
 
@@ -102,25 +131,32 @@ def chroma_ss_process(img):
 
     return y, u, v
 
+
 def initialize_DCT_matrix():
-    a = 1 / (2 * math.sqrt(2))
-    matrix = np.empty([8,8])
+    a = round(float(1 / (2 * math.sqrt(2))),5)
+    matrix = np.empty([8, 8])
 
     for i in range(0, 8, 1):
         for j in range(0, 8, 1):
             if (i == 0):
                 matrix[i, j] = a
             else:
-                matrix[i, j] = 0.5 * math.cos((2*j + 1)*i*math.pi / 16)
+                matrix[i, j] = round(float(0.5 * np.cos((((2*j) + 1) * i * numpy.pi) / 16)),5)
+
+    print("DCT Matrix:")
+    print(matrix)
 
     return matrix
+
 
 def DCT(comp, r, c, T, Q):
     # initialize T transpose from T
     TT = np.transpose(T)
+
     # create new array for DCT'd values
     Fcomp = np.empty([r, c])
-    FQcomp = np.empty([r,c])
+    FFcomp = np.empty([r, c])
+    FQcomp = np.empty([r, c])
 
     # iterate through comp in 8x8 blocks
     for i in range(0, r-7, 8):
@@ -128,30 +164,89 @@ def DCT(comp, r, c, T, Q):
             block = comp[i:i+8][j:j+8]
 
             # apply DCT algorithm to 8x8 block
-            Fblock = np.matmul(T, block)
-            Fblock = np.matmul(block, TT)
+            Fblock = np.zeros((8, 8),  dtype=np.float64)
+            FFblock = np.zeros((8, 8), dtype=np.float64)
+            for c in range(0, 8, 1):
+                for a in range(0, 8, 1):
+                    for b in range(0, 8, 1):
+                        # multiply T and block
+                        Fblock[c, b] += (T[c, a] * (block[a, b]-128))
+
+            for c in range(0, 8, 1):
+                for a in range(0, 8, 1):
+                    for b in range(0, 8, 1):
+                        # multiply T and block
+                        FFblock[c, b] += (Fblock[c, a] * TT[a, b])
 
             # add block to Fcomp matrix
-            Fcomp[i:i + 8][j:j + 8] = Fblock
+            for x in range (i, i+8, 1):
+                for y in range(j, j + 8, 1):
+                    Fcomp[x][y] = FFblock[(x % 8)][(y % 8)]
 
             # Apply Quantization to block
             Qblock = np.empty([8, 8])
-            for k in range (0, 8, 1):
+            for k in range(0, 8, 1):
                 for L in range(0, 8, 1):
-                    Qblock[k, L] = round(Fblock[k, L] / Q[k, L])
+                    Qblock[k, L] = round(FFblock[k, L] / Q[k, L])
 
             # add block to FQcomp matrix
-            FQcomp[i:i + 8][j:j + 8] = Qblock
-
-    print("Fcomp")
-    print(Fcomp)
-
-    print("FQcomp")
-    print(FQcomp)
+            for x in range (i, i+8, 1):
+                for y in range(j, j + 8, 1):
+                    FQcomp[x][y] = Qblock[(x%8)][(y%8)]
+            #FQcomp[i:i + 8][j:j + 8] = Qblock
 
     return FQcomp
 
-def initialize_Q_LUM():
+
+def inverse_DCT(comp, r, c, T, Q):
+    # initialize T transpose from T
+    TT = np.transpose(T)
+
+    # create new array for iDCT'd values
+    iFcomp = np.empty([r, c])
+    iFFcomp = np.empty([r, c])
+    iFQcomp = np.empty([r, c])
+
+    # iterate through comp in 8x8 blocks
+    for i in range(0, r-7, 8):
+        for j in range(0, c-7, 8):
+            iblock = comp[i:i+8][j:j+8]
+
+            # Apply inverse Quantization to block
+            iQblock = np.empty([8, 8])
+            for k in range(0, 8, 1):
+                for L in range(0, 8, 1):
+                    iQblock[k, L] = round(iblock[k, L] * Q[k, L])
+
+            # add block to iFQcomp matrix
+            iFQcomp[i:i + 8][j:j + 8] = iQblock
+
+            # apply iDCT algorithm to 8x8 block
+            iFblock = np.zeros((8, 8),  dtype=np.float64)
+            iFFblock = np.zeros((8, 8), dtype=np.float64)
+            for c in range(0, 8, 1):
+                for a in range(0, 8, 1):
+                    for b in range(0, 8, 1):
+                        # multiply T and block
+                        iFblock[c, b] += (TT[c, a] * (iQblock[a, b]))
+
+            for c in range(0, 8, 1):
+                for a in range(0, 8, 1):
+                    for b in range(0, 8, 1):
+                        # multiply T and block
+                        iFFblock[c, b] += (iFblock[c, a] * T[a, b])
+
+            # add block to iFcomp matrix
+            iFcomp[i:i + 8][j:j + 8] = iFFblock
+
+            for a in range(0, 8, 1):
+                for b in range(0, 8, 1):
+                    iFcomp[a, b] = round(iFcomp[a, b] + 128)
+
+    return iFcomp
+
+
+def initialize_Q_LUM(Q_fact):
     lum = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
                    [12, 12, 14, 19, 26, 58, 60, 55],
                    [14, 13, 16, 24, 40, 57, 69, 56],
@@ -161,9 +256,15 @@ def initialize_Q_LUM():
                    [49, 64, 78, 87, 103, 121, 120, 101],
                    [72, 92, 95, 98, 112, 100, 103, 99]])
 
+    for a in range(0, 8, 1):
+        for b in range(0, 8, 1):
+            lum[a, b] = lum[a, b] * Q_fact
+
+
     return lum
 
-def initialize_Q_CHROME():
+
+def initialize_Q_CHROME(Q_fact):
     chrome = np.array([[17, 18, 24, 47, 99, 99, 99, 99],
                        [18, 21, 26, 66, 99, 99, 99, 99],
                        [24, 26, 56, 99, 99, 99, 99, 99],
@@ -173,16 +274,30 @@ def initialize_Q_CHROME():
                        [99, 99, 99, 99, 99, 99, 99, 99],
                        [99, 99, 99, 99, 99, 99, 99, 99]])
 
+    for a in range(0, 8, 1):
+        for b in range(0, 8, 1):
+            chrome[a, b] = chrome[a, b] * Q_fact
+
     return chrome
 
 
+def error(original, compressed, r, c):
+    Error = np.empty([r, c])
+
+    for a in range(0, r, 1):
+        for b in range(0, c, 1):
+            Error[a, b] = (original[a, b] - compressed[a, b])
+
+    return Error
 
 
 def main():
+    '''
     np.set_printoptions(threshold=np.inf)
     input , output = file_inputs()
     print("input file name = " + str(input))
     print("output file name = " + str(output))
+    '''
 
     # 1 - convert RGB to YUV, resize to fit 8x8
     image = rgb_to_yuv(input)
@@ -203,27 +318,43 @@ def main():
     y_blockcount = (rows * cols) / 64
     uv_blockcount = (uv_rows * uv_cols) / 64
 
-    test = [[200, 202, 189, 188, 189, 175, 175, 175],
+    test = np.array([[200, 202, 189, 188, 189, 175, 175, 175],
             [200, 203, 198, 188, 189, 182, 178, 175],
             [203, 200, 200, 195, 200, 187, 185, 175],
             [200, 200, 200, 200, 197, 187, 187, 187],
             [200, 205, 200, 200, 195, 188, 187, 175],
             [200, 200, 200, 200, 200, 190, 187, 175],
             [205, 200, 199, 200, 191, 187, 187, 175],
-            [210, 200, 200, 200, 188, 185, 187, 186]]
+            [210, 200, 200, 200, 188, 185, 187, 186]])
 
     # 4 - DCT and Quantization
     DCT_matrix = initialize_DCT_matrix()
-    Q_matrix_LUM = initialize_Q_LUM()
-    Q_matrix_CHROME = initialize_Q_CHROME()
-
-    # FQ_y = DCT(y, rows, cols, DCT_matrix, Q_matrix_LUM)
-    # FQ_u = DCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
-    # FQ_v = DCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+    quant_num = 1
+    Q_matrix_LUM = initialize_Q_LUM(quant_num)
+    Q_matrix_CHROME = initialize_Q_CHROME(quant_num)
 
     FQ_test = DCT(test, 8, 8, DCT_matrix, Q_matrix_LUM)
+    FQ_test2 = inverse_DCT(FQ_test, 8, 8, DCT_matrix, Q_matrix_LUM)
+    print(FQ_test)
+    print(FQ_test2)
+
+    '''
+    FQ_y = DCT(y, rows, cols, DCT_matrix, Q_matrix_LUM)
+    FQ_u = DCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+    FQ_v = DCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+
+    iFQ_y = iDCT(y, rows, cols, DCT_matrix, Q_matrix_LUM)
+    iFQ_u = iDCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+    iFQ_v = iDCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+
+    E_y = error(test, FQ_test2, rows, cols)
+    E_u = error(test, FQ_test2, uv_rows, uv_cols)
+    E_v = error(test, FQ_test2, uv_rows, uv_cols)
+    '''
 
 
+    R = recover_uv(test, 8, 8)
+    print(R)
 
     ### CHROMOSUBSAMPLING
     ## How do to the 4:2:0 subsampling
