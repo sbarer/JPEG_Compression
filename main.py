@@ -84,33 +84,35 @@ def yuv_to_rgb(matrix):
 # Recover UV values using single pass
 # WORK ON THIS
 def recover_uv(matrix, r, c):
-    recover = np.empty([(2 * r), (2 * c)])
+    # r & c are the dimensions of the Y matrix, as u&v may have been truncated
 
-    for a in range(0, (2 * r), 2):
-        for b in range(0, (2 * c), 1):
+    recover = np.empty([r, c])
+
+    for a in range(0, r, 2):
+        for b in range(0, c, 1):
             if a % 2 == 0 and b % 2 == 0:    # top left square
                 recover[a][b] = matrix[(a // 2)][(b // 2)]
 
             elif a % 2 == 0 and b % 2 == 1:   # top right square
-                if b == ((2 * r) - 1):  # last column
+                if b == (r - 1):  # last column
                     recover[a][b] = recover[a, (b-1)]
                 else:
                     recover[a][b] = (recover[a][(b-1)] + matrix[(a // 2)][((b // 2) + 1)]) // 2
 
-    for a in range(1, (2 * r), 2):
-        for b in range(0, (2 * c), 1):
+    for a in range(1, r, 2):
+        for b in range(0, c, 1):
             if a % 2 == 1 and b % 2 == 0:   # bottom left square
-                if a == ((2 * r) - 1):  # last row, even column
-                    recover[a][b] = recover[(a-1)][b]
+                if a == (r - 1):  # last row, even column
+                    recover[a][b] = recover[(a - 1)][b]
                 else:
-                    recover[a][b] = (recover[(a-1)][b] + recover[(a+1)][b]) // 2
+                    recover[a][b] = (recover[(a - 1)][b] + recover[(a + 1)][b]) // 2
 
             elif a % 2 == 1 and b % 2 == 1:  # bottom right square
-                if b == ((2 * r) - 1) and a == ((2 * r) - 1):   # last row, last column
+                if b == (r - 1) and a == (r - 1):   # last row, last column
                     recover[a][b] = recover[(a - 1)][(b - 1)]
-                elif b == ((2 * r) - 1):  # last column
+                elif b == (r - 1):  # last column
                     recover[a][b] = (recover[(a - 1)][(b - 1)] + recover[(a + 1)][(b - 1)]) // 2
-                elif a == ((2 * r) - 1):  # last row
+                elif a == (r - 1):  # last row
                     recover[a][b] = (recover[(a - 1)][(b - 1)] + recover[(a - 1)][(b + 1)]) // 2
                 else:
                     recover[a][b] = (((recover[(a - 1)][(b - 1)] + recover[(a + 1)][(b + 1)]) // 2)
