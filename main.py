@@ -23,7 +23,7 @@ def file_inputs():
 
     return input_file_path, output_file_path
 
-# Takes an image in file_path and retuns image with rgb->yuv pixel value conversion
+# Takes an image in file_path and returns image with rgb->yuv pixel value conversion
 def rgb_to_yuv(file_path):
     img = Image.open(file_path)
     pixels = img.load()  # Create Pixel map
@@ -58,42 +58,65 @@ def rgb_to_yuv(file_path):
             pixels[i,j] = (int(y),int(u),int(v))
     return img
 
+
+def yuv_merge(y, u, v, rows, cols):
+    merged_yuv = np.array[rows][cols][3]
+    merged_yuv[:][:][0] = y
+    merged_yuv[:][:][1] = u
+    merged_yuv[:][:][2] = v
+
+    return merged_yuv
+
+
+def yuv_to_rgb(matrix):
+    rgb_converter = np.array([[1.0, 1.0, 1.0],
+                  [-0.000007154783816076815, -0.3441331386566162, 1.7720025777816772],
+                  [1.4019975662231445, -0.7141380310058594, 0.00001542569043522235]])
+
+    rgb_matrix = np.dot(matrix, rgb_converter)
+    rgb_matrix[:, :, 0] -= 179.45477266423404
+    rgb_matrix[:, :, 1] += 135.45870971679688
+    rgb_matrix[:, :, 2] -= 226.8183044444304
+
+    return rgb_matrix
+
+
 # Recover UV values using single pass
 # WORK ON THIS
 def recover_uv(matrix, r, c):
     recover = np.empty([(2 * r), (2 * c)])
 
-    for a in range(0, (2 * r), 1):
+    for a in range(0, (2 * r), 2):
         for b in range(0, (2 * c), 1):
             if a % 2 == 0 and b % 2 == 0:    # top left square
-                recover[a, b] = matrix[(a // 2)][(b // 2)]
+                recover[a][b] = matrix[(a // 2)][(b // 2)]
+
+            elif a % 2 == 0 and b % 2 == 1:   # top right square
+                if b == ((2 * r) - 1):  # last column
+                    recover[a][b] = recover[a, (b-1)]
+                else:
+                    recover[a][b] = (recover[a][(b-1)] + matrix[(a // 2)][((b // 2) + 1)]) // 2
+
+    for a in range(1, (2 * r), 2):
+        for b in range(0, (2 * c), 1):
+            if a % 2 == 1 and b % 2 == 0:   # bottom left square
+                if a == ((2 * r) - 1):  # last row, even column
+                    recover[a][b] = recover[(a-1)][b]
+                else:
+                    recover[a][b] = (recover[(a-1)][b] + recover[(a+1)][b]) // 2
 
             elif a % 2 == 1 and b % 2 == 1:  # bottom right square
                 if b == ((2 * r) - 1) and a == ((2 * r) - 1):   # last row, last column
-                    recover[a, b] = matrix[(a // 2) - 1][((b // 2) - 1)]
-                elif b == ((2 * r) - 1):  # last column, odd row
-                    recover[a, b] = np.mean(matrix[(a // 2) - 1][((b // 2) - 1)] + matrix[(a // 2) + 1][((b // 2) - 1)])
-                elif a == ((2 * r) - 1):  # last row, odd column
-                    recover[a, b] = np.mean(matrix[(a // 2) - 1][((b // 2) - 1)] + matrix[(a // 2) - 1][((b // 2) + 1)])
+                    recover[a][b] = recover[(a - 1)][(b - 1)]
+                elif b == ((2 * r) - 1):  # last column
+                    recover[a][b] = (recover[(a - 1)][(b - 1)] + recover[(a + 1)][(b - 1)]) // 2
+                elif a == ((2 * r) - 1):  # last row
+                    recover[a][b] = (recover[(a - 1)][(b - 1)] + recover[(a - 1)][(b + 1)]) // 2
                 else:
-                    recover[a, b] = np.mean(np.mean(matrix[((a // 2) - 1)][((b // 2) - 1)] + matrix[((a // 2) + 1)][((b // 2) + 1)])
-                                        + np.mean(matrix[((a // 2) + 1)][((b // 2) - 1)] + matrix[((a // 2) - 1)][((b // 2) + 1)]))
-
-            elif a % 2 == 0 and b % 2 == 1:   # bottom left square
-                if a == ((2 * r) - 1):  # last row, even column
-                    recover[a, b] = matrix[(a // 2) - 1][(b // 2)]
-                else:
-                    recover[a, b] = np.mean(matrix[((a // 2) - 1)][(b // 2)] + matrix[((a // 2) + 1)][b // 2])
-
-            elif a % 2 == 1 and b % 2 == 0:   # top right square
-                if b == ((2 * r) - 1):  # last column, even row
-                    recover[a, b] = matrix[(a // 2)][((b // 2) - 1)]
-                else:
-                    recover[a, b] = np.mean(matrix[(a // 2)][((b // 2) - 1)] + matrix[(a // 2)][((b // 2) + 1)])
+                    recover[a][b] = (((recover[(a - 1)][(b - 1)] + recover[(a + 1)][(b + 1)]) // 2)
+                                        + (recover[(a + 1)][(b - 1)] + recover[(a - 1)][(b + 1)]) // 2) // 2
 
     return recover
-
-
 
 
 # applys a 4:2:0 chroma subsampling to image
@@ -192,8 +215,9 @@ def DCT(comp, r, c, T, Q):
             # add block to FQcomp matrix
             for x in range (i, i+8, 1):
                 for y in range(j, j + 8, 1):
-                    FQcomp[x][y] = Qblock[(x%8)][(y%8)]
-            #FQcomp[i:i + 8][j:j + 8] = Qblock
+                    FQcomp[x][y] = Qblock[(x % 8)][(y % 8)]
+
+            # FQcomp[i:i + 8][j:j + 8] = Qblock
 
     return FQcomp
 
@@ -292,12 +316,12 @@ def error(original, compressed, r, c):
 
 
 def main():
-    '''
+
     np.set_printoptions(threshold=np.inf)
     input , output = file_inputs()
     print("input file name = " + str(input))
     print("output file name = " + str(output))
-    '''
+
 
     # 1 - convert RGB to YUV, resize to fit 8x8
     image = rgb_to_yuv(input)
@@ -335,8 +359,8 @@ def main():
 
     FQ_test = DCT(test, 8, 8, DCT_matrix, Q_matrix_LUM)
     FQ_test2 = inverse_DCT(FQ_test, 8, 8, DCT_matrix, Q_matrix_LUM)
-    print(FQ_test)
-    print(FQ_test2)
+    #print(FQ_test)
+    #print(FQ_test2)
 
     '''
     FQ_y = DCT(y, rows, cols, DCT_matrix, Q_matrix_LUM)
@@ -354,6 +378,8 @@ def main():
 
 
     R = recover_uv(test, 8, 8)
+    print(test)
+    print("recover")
     print(R)
 
     ### CHROMOSUBSAMPLING
