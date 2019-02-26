@@ -418,7 +418,7 @@ def main():
     '''
 
     # 1 - convert RGB to YUV, resize to fit 8x8
-    input = 'lena.ppm'
+    input = 'pupper.jpg'
     image = rgb_to_yuv(input)
 
     # 2 - Split YUV into Y U V and subsequent downsampling
@@ -448,19 +448,19 @@ def main():
 
     # 4 - DCT and Quantization
     DCT_matrix = initialize_DCT_matrix()
-    quant_num = 1
+    quant_num = 0.5
     Q_matrix_LUM = initialize_Q_LUM(quant_num)
     Q_matrix_CHROME = initialize_Q_CHROME(quant_num)
 
     compressed_y_pixels = apply_DCT(y, rows, cols, DCT_matrix, Q_matrix_LUM)
-    compressed_u_pixels = apply_DCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
-    compressed_v_pixels = apply_DCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
+    compressed_u_pixels = apply_DCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+    compressed_v_pixels = apply_DCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
 
     print('compressed y block: ',compressed_y_pixels[0:8,0:8])
     # 5 - Decode Pixel values 
     decompressed_y_pixels = inverse_DCT(compressed_y_pixels, rows, cols, DCT_matrix, Q_matrix_LUM)
-    decompressed_u_pixels = inverse_DCT(compressed_u_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
-    decompressed_v_pixels = inverse_DCT(compressed_v_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
+    decompressed_u_pixels = inverse_DCT(compressed_u_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+    decompressed_v_pixels = inverse_DCT(compressed_v_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
     print('decompressed y block: ',decompressed_y_pixels[0:8,0:8])
         
     # 6 - Recover UV pixels lost from chroma subsampling 
