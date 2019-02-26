@@ -88,19 +88,19 @@ def recouver_uv(small, lrows,lcols):
     #print('this is last col', last_col)
     for i in range(0,lrows,2):
         for j in range(0,lcols):
-            print(i,j)
+            #print(i,j)
             if (i % 2 ==0 and j %2 ==0): 
                 pass
             else:    
                 if(j==int((last_col))):   #if the current element is at the very last colum
                     large[i,j] = large[i,j-1]
                 else:
-                    print(i,j)
+                    #print(i,j)
                     avg_val = (large[i,j-1] + large[i, j+1])/2  #avg val of two columns
                     avg_val = round(avg_val)
                     large[i,j] = avg_val
 
-    print(large)
+    #print(large)
                 
     #second interpolation pass
     last_row = lrows - 1
@@ -128,9 +128,9 @@ def yuv_merge(y, u, v, rows, cols):
     merged_yuv = np.zeros((rows, cols,3), dtype=np.uint8)
     for i in range(0,rows):
         for j in range(0,cols):
-            merged_yuv[i,j][0] = y[i,j]
-            merged_yuv[i,j][1] = u[i,j]
-            merged_yuv[i,j][2] = v[i,j]
+            merged_yuv[i,j][0] = int(y[i,j])
+            merged_yuv[i,j][1] = int(u[i,j])
+            merged_yuv[i,j][2] = int(v[i,j])
 
     return merged_yuv
 
@@ -302,7 +302,7 @@ def inverse_DCT(pixels, rows, cols, DCT_matrix, Q):
     cols_padding = cols % 8
     r = rows - rows_padding
     c = cols - cols_padding
-    print('r,c',r,c)
+    #print('r,c',r,c)
     # iterate through pixels that have undergone compression in 8x8 blocks
     for i in range(0, r, 8):
         for j in range(0, c, 8):
@@ -358,7 +358,7 @@ def inverse_DCT(pixels, rows, cols, DCT_matrix, Q):
                 for y in range(0, 8, 1):
                     iFcomp[i+x , j+y] = iFFblock[x,y]
 
-            print('iFcomp', iFcomp[i:i+8,j:j+8])
+            #print('iFcomp', iFcomp[i:i+8,j:j+8])
             
     
     return iFcomp
@@ -456,18 +456,23 @@ def main():
     compressed_u_pixels = apply_DCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
     compressed_v_pixels = apply_DCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
 
+    print('compressed y block: ',compressed_y_pixels[0:8,0:8])
     # 5 - Decode Pixel values 
     decompressed_y_pixels = inverse_DCT(compressed_y_pixels, rows, cols, DCT_matrix, Q_matrix_LUM)
     decompressed_u_pixels = inverse_DCT(compressed_u_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
     decompressed_v_pixels = inverse_DCT(compressed_v_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
-    
+    print('decompressed y block: ',decompressed_y_pixels[0:8,0:8])
         
     # 6 - Recover UV pixels lost from chroma subsampling 
     # Y is MxN , UV are both JxK where J,K < M,N 
     # recover pixels so that |J,K| == |M,N|
+    #RECOUVER MAY BE THE SOURCE OF BUG
 
     recouvered_u_matrix = recouver_uv(decompressed_u_pixels, rows, cols)
     recouvered_v_matrix = recouver_uv(decompressed_v_pixels, rows, cols)
+
+    print('recouvered u block: ',recouvered_u_matrix[0:8,0:8])
+    print('recouvered v block: ',recouvered_v_matrix[0:8,0:8])
 
     print('recovered_u_matrix dimensions', recouvered_u_matrix.shape)
     print('recovered_v_matrix dimensions', recouvered_v_matrix.shape)
@@ -476,13 +481,14 @@ def main():
     # 7 - Merge Y,U,V matrices together into a 3D matrix
 
     yuv_img = yuv_merge(decompressed_y_pixels, recouvered_u_matrix, recouvered_v_matrix, rows, cols)
+    print('recouvered v block: ',recouvered_v_matrix[0:8,0:8])
 
     # 8 - Convert YUV matrix back to RGB
-
-    image_converted_to_rgb = yuv_to_rgb(yuv_img)
+    #converting to rgb MAY BE THE SOURCE OF BUG
+    #image_converted_to_rgb = yuv_to_rgb(yuv_img)
 
     # 9 - Create an Image object from array and render
-    decoded_img = Image.fromarray(image_converted_to_rgb, 'RGB')
+    decoded_img = Image.fromarray(yuv_img, 'RGB')
 
     decoded_img.show()
 
