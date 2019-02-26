@@ -26,6 +26,7 @@ def file_inputs():
 # Takes an image in file_path and retuns image with rgb->yuv pixel value conversion
 def rgb_to_yuv(file_path):
     img = Image.open(file_path)
+    img.show()
     pixels = img.load()  # Create Pixel map
 
     width = img.size[0]
@@ -40,10 +41,10 @@ def rgb_to_yuv(file_path):
         allpix = np.array(img, dtype=np.uint8)
         temp = allpix[0:width-width_padding:1, 0:height-height_padding:1]
         # load spliced image into pixeldata
-        image = Image.fromarray(temp, 'RGB')
-        pixels = image.load()
-        width = image.size[0]
-        height = image.size[1]
+        img = Image.fromarray(temp, 'RGB')
+        pixels = img.load()
+        width = img.size[0]
+        height = img.size[1]
 
     # RGB -> YUV conversion
     for i in range(width):
@@ -55,6 +56,7 @@ def rgb_to_yuv(file_path):
             u = 0.492* (b-y)
             v = 0.877 * (r-y)
             pixels[i,j] = (int(y),int(u),int(v))
+    img.show()        
     return img
 
 # Recouver UV values using single pass
@@ -148,12 +150,19 @@ def yuv_to_rgb(matrix):
     return rgb_matrix
 #TODO: write the converter
 def yuv_to_rgb2(matrix):
-    row, col = matrix.shape
-    rgb_matrix = np.zeros((row,col), dtype=np.uint8)
+    row, col, depth = matrix.shape
+    rgb_matrix = np.zeros((row,col,depth), dtype=np.uint8)
     for i in range(row):
         for j in range(col): 
-            pass
-            #TODO Write the conver
+            y = matrix[i,j][0]
+            u = matrix[i,j][1]
+            v = matrix[i,j][2]
+            r = v + y 
+            b = u + y
+            g = (y -(0.299*r) -(0.114*b))/0.587
+            rgb_matrix[i,j][0] = int(r)
+            rgb_matrix[i,j][1] = int(g)
+            rgb_matrix[i,j][2] = int(b)
             
     return rgb_matrix
 
@@ -418,8 +427,9 @@ def main():
     '''
 
     # 1 - convert RGB to YUV, resize to fit 8x8
-    input = 'pupper.jpg'
+    input = 'lena.ppm'
     image = rgb_to_yuv(input)
+    #image.show()
 
     # 2 - Split YUV into Y U V and subsequent downsampling
     y, u, v = chroma_ss_process(image)
@@ -446,21 +456,22 @@ def main():
             [205, 200, 199, 200, 191, 187, 187, 175],
             [210, 200, 200, 200, 188, 185, 187, 186]])
 
+    print('original Y block', y[0:8,0:8])
     # 4 - DCT and Quantization
     DCT_matrix = initialize_DCT_matrix()
-    quant_num = 0.5
+    quant_num = 0.1
     Q_matrix_LUM = initialize_Q_LUM(quant_num)
     Q_matrix_CHROME = initialize_Q_CHROME(quant_num)
 
     compressed_y_pixels = apply_DCT(y, rows, cols, DCT_matrix, Q_matrix_LUM)
-    compressed_u_pixels = apply_DCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
-    compressed_v_pixels = apply_DCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+    compressed_u_pixels = apply_DCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
+    compressed_v_pixels = apply_DCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
 
     print('compressed y block: ',compressed_y_pixels[0:8,0:8])
     # 5 - Decode Pixel values 
     decompressed_y_pixels = inverse_DCT(compressed_y_pixels, rows, cols, DCT_matrix, Q_matrix_LUM)
-    decompressed_u_pixels = inverse_DCT(compressed_u_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
-    decompressed_v_pixels = inverse_DCT(compressed_v_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
+    decompressed_u_pixels = inverse_DCT(compressed_u_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
+    decompressed_v_pixels = inverse_DCT(compressed_v_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
     print('decompressed y block: ',decompressed_y_pixels[0:8,0:8])
         
     # 6 - Recover UV pixels lost from chroma subsampling 
@@ -485,10 +496,10 @@ def main():
 
     # 8 - Convert YUV matrix back to RGB
     #converting to rgb MAY BE THE SOURCE OF BUG
-    #image_converted_to_rgb = yuv_to_rgb(yuv_img)
+    image_converted_to_rgb = yuv_to_rgb2(yuv_img)
 
     # 9 - Create an Image object from array and render
-    decoded_img = Image.fromarray(yuv_img, 'RGB')
+    decoded_img = Image.fromarray(image_converted_to_rgb, 'RGB')
 
     decoded_img.show()
 
