@@ -57,44 +57,71 @@ def rgb_to_yuv(file_path):
             pixels[i,j] = (int(y),int(u),int(v))
     return img
 
-# Recover UV values using single pass
+# Recouver UV values using single pass
 # WORK ON THIS
-def recover_uv(matrix, r, c):
-    # r & c are the dimensions of the Y matrix, as u&v may have been truncated
+#array[rows, cols]
+# rows, cols = array.shape
+def recouver_uv(small, lrows,lcols):
+    rows, cols = small.shape
+    large = np.zeros((lrows,lcols), dtype=np.uint8)
+    lrows, lcols = large.shape
 
-    recover = np.empty([r, c])
-
-    for a in range(0, r, 2):
-        for b in range(0, c, 1):
-            if a % 2 == 0 and b % 2 == 0:    # top left square
-                recover[a][b] = matrix[(a // 2)][(b // 2)]
-
-            elif a % 2 == 0 and b % 2 == 1:   # top right square
-                if b == (r - 1):  # last column
-                    recover[a][b] = recover[a, (b-1)]
+    col_padding = abs(lcols - (cols * 2))
+    row_padding = abs(lrows - (rows * 2))
+    #print('col_padding: ',col_padding)
+    #print('row_padding: ' ,row_padding)
+    r = lrows -row_padding
+    c = lcols -col_padding
+    #Initial fill of large matrix
+    for i in range(0,r):
+        for j in range(0,c):
+            #print(i,j)
+            if (i % 2 ==0 and j %2 ==0):    #top left corner
+                #print('i,j:',i,j)
+                #print('padding values: ',row_padding,col_padding)
+                #print('dimensions: ',r,c)
+                large[i,j] = small[i/2,j/2]
+            
+        
+    #first interpolation pass
+    last_col = lcols-1
+    #print('this is last col', last_col)
+    for i in range(0,lrows,2):
+        for j in range(0,lcols):
+            print(i,j)
+            if (i % 2 ==0 and j %2 ==0): 
+                pass
+            else:    
+                if(j==int((last_col))):   #if the current element is at the very last colum
+                    large[i,j] = large[i,j-1]
                 else:
-                    recover[a][b] = (recover[a][(b-1)] + matrix[(a // 2)][((b // 2) + 1)]) // 2
+                    print(i,j)
+                    avg_val = (large[i,j-1] + large[i, j+1])/2  #avg val of two columns
+                    avg_val = round(avg_val)
+                    large[i,j] = avg_val
 
-    for a in range(1, r, 2):
-        for b in range(0, c, 1):
-            if a % 2 == 1 and b % 2 == 0:   # bottom left square
-                if a == (r - 1):  # last row, even column
-                    recover[a][b] = recover[(a - 1)][b]
-                else:
-                    recover[a][b] = (recover[(a - 1)][b] + recover[(a + 1)][b]) // 2
+    print(large)
+                
+    #second interpolation pass
+    last_row = lrows - 1
+    for i in range(1,lrows,2):
+        for j in range(0,lcols):
+            if(i== last_row):
+                large[i,j] = large[i-1,j]
+            else:
+                avg_val = (large[i-1,j] + large[i+1,j])/2
+                avg_val = round(avg_val)
+                large[i,j] = avg_val
 
-            elif a % 2 == 1 and b % 2 == 1:  # bottom right square
-                if b == (r - 1) and a == (r - 1):   # last row, last column
-                    recover[a][b] = recover[(a - 1)][(b - 1)]
-                elif b == (r - 1):  # last column
-                    recover[a][b] = (recover[(a - 1)][(b - 1)] + recover[(a + 1)][(b - 1)]) // 2
-                elif a == (r - 1):  # last row
-                    recover[a][b] = (recover[(a - 1)][(b - 1)] + recover[(a - 1)][(b + 1)]) // 2
-                else:
-                    recover[a][b] = (((recover[(a - 1)][(b - 1)] + recover[(a + 1)][(b + 1)]) // 2)
-                                        + (recover[(a + 1)][(b - 1)] + recover[(a - 1)][(b + 1)]) // 2) // 2
+    #input small array values into large array 
 
-    return recover
+
+
+    #print('small', small)
+    #print('large', large)
+    #print(rows, cols)
+    return large
+    
 
 
 def yuv_merge(y, u, v, rows, cols):
@@ -119,7 +146,16 @@ def yuv_to_rgb(matrix):
     rgb_matrix[:, :, 2] -= 226.8183044444304
 
     return rgb_matrix
-
+#TODO: write the converter
+def yuv_to_rgb2(matrix):
+    row, col = matrix.shape
+    rgb_matrix = np.zeros((row,col), dtype=np.uint8)
+    for i in range(row):
+        for j in range(col): 
+            pass
+            #TODO Write the conver
+            
+    return rgb_matrix
 
 # applys a 4:2:0 chroma subsampling to image
 # returns 3 2D arrays corresponding to YUV
@@ -382,7 +418,7 @@ def main():
     '''
 
     # 1 - convert RGB to YUV, resize to fit 8x8
-    input = 'pupper.jpg'
+    input = 'lena.ppm'
     image = rgb_to_yuv(input)
 
     # 2 - Split YUV into Y U V and subsequent downsampling
@@ -425,21 +461,30 @@ def main():
     decompressed_u_pixels = inverse_DCT(compressed_u_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
     decompressed_v_pixels = inverse_DCT(compressed_v_pixels, uv_rows, uv_cols, DCT_matrix, Q_matrix_LUM)
     
-    
-    #print('-------------------------------------------RESULTS--------------------------------')
-    
+        
     # 6 - Recover UV pixels lost from chroma subsampling 
     # Y is MxN , UV are both JxK where J,K < M,N 
     # recover pixels so that |J,K| == |M,N|
 
-    recovered_u_matrix = recover_uv(decompressed_u_pixels, rows, cols)
-    recovered_v_matrix = recover_uv(decompressed_v_pixels, rows, cols)
+    recouvered_u_matrix = recouver_uv(decompressed_u_pixels, rows, cols)
+    recouvered_v_matrix = recouver_uv(decompressed_v_pixels, rows, cols)
 
-    print('recovered_u_matrix dimensions', recovered_u_matrix.shape)
-    print('recovered_v_matrix dimensions', recovered_v_matrix.shape)
-    # 7 - Merge YUV matrices
+    print('recovered_u_matrix dimensions', recouvered_u_matrix.shape)
+    print('recovered_v_matrix dimensions', recouvered_v_matrix.shape)
+    print(recouvered_u_matrix)
+    
+    # 7 - Merge Y,U,V matrices together into a 3D matrix
 
-    yuv_img = yuv_merge(decompressed_y_pixels, recovered_u_matrix, recovered_v_matrix, rows, cols)
+    yuv_img = yuv_merge(decompressed_y_pixels, recouvered_u_matrix, recouvered_v_matrix, rows, cols)
+
+    # 8 - Convert YUV matrix back to RGB
+
+    image_converted_to_rgb = yuv_to_rgb(yuv_img)
+
+    # 9 - Create an Image object from array and render
+    decoded_img = Image.fromarray(image_converted_to_rgb, 'RGB')
+
+    decoded_img.show()
 
 
 
