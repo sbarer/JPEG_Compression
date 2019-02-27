@@ -60,9 +60,45 @@ class jpeg_coder:
                 u = 0.492* (b-y)
                 v = 0.877 * (r-y)
                 pixels[i,j] = (int(y),int(u),int(v))
-        img.show()
+        #img.show()
         return img
 
+    def recover_uv(self, matrix, r, c):
+    # r & c are the dimensions of the Y matrix, as u&v may have been truncated
+
+        recover = np.empty([r, c])
+
+        for a in range(0, r, 2):
+            for b in range(0, c, 1):
+                if a % 2 == 0 and b % 2 == 0:  # top left square
+                    recover[a][b] = matrix[(a // 2)][(b // 2)]
+
+                elif a % 2 == 0 and b % 2 == 1:  # top right square
+                    if b == (r - 1):  # last column
+                        recover[a][b] = recover[a, (b - 1)]
+                    else:
+                        recover[a][b] = (recover[a][(b - 1)] + matrix[(a // 2)][((b // 2) + 1)]) // 2
+
+        for a in range(1, r, 2):
+            for b in range(0, c, 1):
+                if a % 2 == 1 and b % 2 == 0:  # bottom left square
+                    if a == (r - 1):  # last row, even column
+                        recover[a][b] = recover[(a - 1)][b]
+                    else:
+                        recover[a][b] = (recover[(a - 1)][b] + recover[(a + 1)][b]) // 2
+
+                elif a % 2 == 1 and b % 2 == 1:  # bottom right square
+                    if b == (r - 1) and a == (r - 1):  # last row, last column
+                        recover[a][b] = recover[(a - 1)][(b - 1)]
+                    elif b == (r - 1):  # last column
+                        recover[a][b] = (recover[(a - 1)][(b - 1)] + recover[(a + 1)][(b - 1)]) // 2
+                    elif a == (r - 1):  # last row
+                        recover[a][b] = (recover[(a - 1)][(b - 1)] + recover[(a - 1)][(b + 1)]) // 2
+                    else:
+                        recover[a][b] = (((recover[(a - 1)][(b - 1)] + recover[(a + 1)][(b + 1)]) // 2)
+                                        + (recover[(a + 1)][(b - 1)] + recover[(a - 1)][(b + 1)]) // 2) // 2
+
+        return recover
     # Recouver UV values using single pass
     # WORK ON THIS
     #array[rows, cols]
@@ -115,7 +151,7 @@ class jpeg_coder:
                 if(i== last_row):
                     large[i,j] = large[i-1,j]
                 else:
-                    avg_val = (large[i-1,j] + large[i+1,j])/2
+                    avg_val = (large[i-1,j])/2 + (large[i+1,j])/2
                     avg_val = round(avg_val)
                     large[i,j] = avg_val
 
@@ -158,16 +194,24 @@ class jpeg_coder:
     def yuv_to_rgb2(self, matrix):
         row, col, depth = matrix.shape
         img = Image.fromarray(matrix, 'RGB')
-        img.show()
+        #img.show()
         rgb_matrix = np.zeros((row,col,depth), dtype=np.uint8)
         for i in range(row):
             for j in range(col): 
                 y = matrix[i,j][0]
                 u = matrix[i,j][1]
                 v = matrix[i,j][2]
-                r = v + y 
-                b = u + y
+                if((v + y) > 255):
+                    r = 255
+                else:
+                    r = v + y 
+
+                if((u + y) >255):
+                    b = 255
+                else:
+                    b = u + y
                 g = (y -(0.299*r) -(0.114*b))/0.587
+                
                 rgb_matrix[i,j][0] = int(r)
                 rgb_matrix[i,j][1] = int(g)
                 rgb_matrix[i,j][2] = int(b)
@@ -177,6 +221,7 @@ class jpeg_coder:
     # applys a 4:2:0 chroma subsampling to image
     # returns 3 2D arrays corresponding to YUV
     # FORMAT: pixels[width, height] np.array[height, width]
+    # TODO: Try taking average
     def chroma_ss_process(self, img):
         width = img.size[0]
         height = img.size[1]
@@ -187,6 +232,8 @@ class jpeg_coder:
         w = width // 2
         u = np.zeros((h, w), dtype=np.uint8)
         v = np.zeros((h, w), dtype=np.uint8)
+        u_test = np.zeros((height, width), dtype=np.uint8)
+        v_test = np.zeros((height, width), dtype=np.uint8)
 
         for i in range(height):
             for j in range(width):
@@ -194,7 +241,11 @@ class jpeg_coder:
                     y[i, j] = pixels[j, i][0]
                     u[i//2, j//2] = pixels[j, i][1]
                     v[i//2, j//2] = pixels[j, i][2]
+                    u_test[i, j] = pixels[j, i][1]
+                    v_test[i, j] = pixels[j, i][2]
                 else:
+                    u_test[i, j] = pixels[j, i][1]
+                    v_test[i, j] = pixels[j, i][2]
                     y[i, j] = pixels[j, i][0]
 
         # trim padding to make array a multiple of 8
@@ -206,6 +257,13 @@ class jpeg_coder:
             height_padding = u_height % 8
             u = u[0:u_height - height_padding:1, 0:u_width - width_padding:1]
             v = v[0:v_height - height_padding:1, 0:v_width - width_padding:1]
+
+        test_y = Image.fromarray(y)
+        test_y.show()
+        test_u = Image.fromarray(u_test)
+        test_u.show()
+        test_v = Image.fromarray(v_test)
+        test_v.show()
 
         #print('u', u)
         #print('dimensions', u.shape)
@@ -260,7 +318,7 @@ class jpeg_coder:
                 #Create Block of 8x8 pixel values to perform DCT on
                 for x in range(0,8,1):
                     for y in range(0,8,1):
-                        block[y,x] = pixels[i+x,j+y]
+                        block[x,y] = pixels[i+x,j+y]
                 
 
                 # apply DCT algorithm to 8x8 block
@@ -490,8 +548,13 @@ class jpeg_coder:
         # recover pixels so that |J,K| == |M,N|
         #RECOUVER MAY BE THE SOURCE OF BUG
 
-        recouvered_u_matrix = self.recouver_uv(decompressed_u_pixels, rows, cols)
-        recouvered_v_matrix = self.recouver_uv(decompressed_v_pixels, rows, cols)
+        recouvered_u_matrix = self.recover_uv(decompressed_u_pixels, rows, cols)
+        recouvered_v_matrix = self.recover_uv(decompressed_v_pixels, rows, cols)
+
+        recovered_u = Image.fromarray(recouvered_u_matrix)
+        recovered_u.show()
+        recovered_v = Image.fromarray(recouvered_v_matrix)
+        recovered_v.show()
 
         print('recouvered u block: ',recouvered_u_matrix[0:8,0:8])
         print('recouvered v block: ',recouvered_v_matrix[0:8,0:8])
