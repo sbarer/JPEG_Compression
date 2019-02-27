@@ -9,9 +9,7 @@ import axios from 'axios';
 class ImageManager extends Component{
     state ={
         images : [
-            {id:'1', filePath:'space.jpg', compression:1, sizeBefore:56, sizeAfter:10},
-            {id:'2', filePath:'space.jpg', compression:2, sizeBefore:32, sizeAfter:20},
-            {id:'3', filePath:'hotel_spot.jpg', compression:3, sizeBefore:30, sizeAfter:20}
+            
 
         ],
         active: false,
@@ -19,7 +17,9 @@ class ImageManager extends Component{
         imageProcessing:false,
         currentImage: "",
         currentCompressVal:1,
+        confirmedCompressVal:1,
         loadingImage:false,
+        shouldRenderImage:false
     }
 
 
@@ -56,7 +56,7 @@ class ImageManager extends Component{
     //This will be a HTTP request for image compression later
     //Return: FILE SIZE- Before and After 
     compressAndShowImage = () =>{ 
-        this.setState({loadingImage:true})
+        this.setState({loadingImage:true, confirmedCompressVal:this.state.currentCompressVal})
         const images = [...this.state.images]
         const id = this.state.indexCount
         const filePath = this.state.currentImage;
@@ -118,7 +118,9 @@ class ImageManager extends Component{
                 </div>
                 <ImageControl 
                 images={this.state.images}
+                compress = {this.state.confirmedCompressVal}
                 click={this.removeImageHandler}
+                shouldRenderImage = {this.state.shouldRenderImage}
                 />
             </Aux>
         );
