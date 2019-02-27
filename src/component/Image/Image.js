@@ -38,7 +38,7 @@ class ImageD extends React.Component {
         let comp_img_src = images(`./${compressed_img_src}`)
         let compression_ratio = (this.props.sizeBefore/this.props.sizeAfter)
 
-        compression_ratio.toFixed(2)
+        compression_ratio = compression_ratio.toFixed(2)
         return (
             <div className={classes.Image}>
                 <h1>{this.props.imagePath}</h1>
