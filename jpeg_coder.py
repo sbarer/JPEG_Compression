@@ -30,6 +30,7 @@ class jpeg_coder:
     # Takes an image in file_path and retuns image with rgb->yuv pixel value conversion
     def rgb_to_yuv(self,file_path):
         img = Image.open(file_path)
+        img.show()
         pixels = img.load()  # Create Pixel map
 
         width = img.size[0]
@@ -44,10 +45,10 @@ class jpeg_coder:
             allpix = np.array(img, dtype=np.uint8)
             temp = allpix[0:width-width_padding:1, 0:height-height_padding:1]
             # load spliced image into pixeldata
-            image = Image.fromarray(temp, 'RGB')
-            pixels = image.load()
-            width = image.size[0]
-            height = image.size[1]
+            img = Image.fromarray(temp, 'RGB')
+            pixels = img.load()
+            width = img.size[0]
+            height = img.size[1]
 
         # RGB -> YUV conversion
         for i in range(width):
@@ -59,6 +60,7 @@ class jpeg_coder:
                 u = 0.492* (b-y)
                 v = 0.877 * (r-y)
                 pixels[i,j] = (int(y),int(u),int(v))
+        img.show()
         return img
 
     # Recouver UV values using single pass
@@ -155,6 +157,8 @@ class jpeg_coder:
     #TODO: write the converter
     def yuv_to_rgb2(self, matrix):
         row, col, depth = matrix.shape
+        img = Image.fromarray(matrix, 'RGB')
+        img.show()
         rgb_matrix = np.zeros((row,col,depth), dtype=np.uint8)
         for i in range(row):
             for j in range(col): 
@@ -503,10 +507,10 @@ class jpeg_coder:
 
         # 8 - Convert YUV matrix back to RGB
         #converting to rgb MAY BE THE SOURCE OF BUG
-        #image_converted_to_rgb = yuv_to_rgb(yuv_img)
+        image_converted_to_rgb = self.yuv_to_rgb2(yuv_img)
 
         # 9 - Create an Image object from array and render
-        decoded_img = Image.fromarray(yuv_img, 'RGB')
+        decoded_img = Image.fromarray(image_converted_to_rgb, 'RGB')
 
         decoded_img.show()
 
@@ -570,7 +574,8 @@ class jpeg_coder:
 # Checks to see if this is the main module being run
 if __name__ == '__main__':
 
-    jpeg = jpeg_coder(0.2)
-    jpeg.encode('./src/assets/images/pup.jpg')
+    jpeg = jpeg_coder(0.1)
+    jpeg.encode('./src/assets/images/lena.ppm')
+    
 
 

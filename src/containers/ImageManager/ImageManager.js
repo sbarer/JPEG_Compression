@@ -113,8 +113,8 @@ class ImageManager extends Component{
                     ></CompressProcess>
                 </Modal>
                 <div className={classes.StartApp}>
-                    <h1>START OUR APPLICATION</h1>
-                    <button onClick={this.toggleImageModal}>PRESS ME</button>
+                    <h1>START THE APPLICATION</h1>
+                    <button onClick={this.toggleImageModal}>CLICK ME</button>
                 </div>
                 <ImageControl 
                 images={this.state.images}
