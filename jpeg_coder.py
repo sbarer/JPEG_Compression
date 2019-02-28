@@ -43,7 +43,7 @@ class jpeg_coder:
             width_padding = width%8
             height_padding = height%8
             allpix = np.array(img, dtype=np.uint8)
-            temp = allpix[0:width-width_padding:1, 0:height-height_padding:1]
+            temp = allpix[0:height-height_padding:1, 0:width-width_padding:1]
             # load spliced image into pixeldata
             img = Image.fromarray(temp, 'RGB')
             pixels = img.load()
@@ -193,7 +193,7 @@ class jpeg_coder:
     #TODO: write the converter
     def yuv_to_rgb2(self, matrix):
         row, col, depth = matrix.shape
-        img = Image.fromarray(matrix, 'RGB')
+        #img = Image.fromarray(matrix, 'RGB')
         #img.show()
         rgb_matrix = np.zeros((row,col,depth), dtype=np.uint8)
         for i in range(row):
@@ -201,6 +201,18 @@ class jpeg_coder:
                 y = matrix[i,j][0]
                 u = matrix[i,j][1]
                 v = matrix[i,j][2]
+                #if((y + (1.140*v))> 255 ):
+                #r = 255
+                #else:
+                #    r = y + (1.140*v)
+                #if((y - (0.395*u) - (0.581*v)) > 255):
+                #    g = 255
+                #else:
+                #    g = y - (0.395*u) - (0.581*v)
+                #if((y + (2.032*u)) > 255):
+                #    b = 255
+                #else:
+                #    b = y + (2.032*u)
                 if((v + y) > 255):
                     r = 255
                 else:
@@ -548,8 +560,8 @@ class jpeg_coder:
         # recover pixels so that |J,K| == |M,N|
         #RECOUVER MAY BE THE SOURCE OF BUG
 
-        recouvered_u_matrix = self.recover_uv(decompressed_u_pixels, rows, cols)
-        recouvered_v_matrix = self.recover_uv(decompressed_v_pixels, rows, cols)
+        recouvered_u_matrix = self.recouver_uv(decompressed_u_pixels, rows, cols)
+        recouvered_v_matrix = self.recouver_uv(decompressed_v_pixels, rows, cols)
 
         recovered_u = Image.fromarray(recouvered_u_matrix)
         recovered_u.show()
@@ -594,8 +606,8 @@ class jpeg_coder:
         
         print(image_dir)
         
-        print('before compression size', before_comp_file_size/1000)
-        print(after_comp_file_size/1000)
+        print('before compression file size', before_comp_file_size/1000)
+        print('after compression file size',after_comp_file_size/1000)
 
        
         
