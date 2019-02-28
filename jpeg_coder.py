@@ -56,9 +56,14 @@ class jpeg_coder:
                 r = pixels[i, j][0]
                 g = pixels[i, j][1]
                 b = pixels[i, j][2]
-                y = 0.299*r + 0.587*g + 0.114*b
-                u = 0.492* (b-y)
-                v = 0.877 * (r-y)
+                #y = (0.299*r) + (0.587*g) + (0.114*b)
+                #u = 0.492* (b-y)
+                #v = 0.877 * (r-y)
+                #u = (-0.299*r) - (0.587*g) + (0.886*b) 
+                #v = (0.701* r) - (0.587*g) - (0.114*b)
+                y = r *  .299000 + g *  .587000 + b *  .114000
+                u = r * -.168736 + g * -.331264 + b *  .500000 + 128
+                v = r *  .500000 + g * -.418688 + b * -.081312 + 128
                 pixels[i,j] = (int(y),int(u),int(v))
         #img.show()
         return img
@@ -99,6 +104,78 @@ class jpeg_coder:
                                         + (recover[(a + 1)][(b - 1)] + recover[(a - 1)][(b + 1)]) // 2) // 2
 
         return recover
+
+    def recover_uv_v2(self, matrix, r, c):
+    # r & c are the dimensions of the Y matrix, as u&v may have been truncated
+        recover = np.empty([r, c])
+
+        # calculate size of new temp array
+        size_r = r // 2
+        size_c = c // 2
+        last_col = c - 1
+        last_row = r - 1
+        temp = np.zeros((size_r, size_c))
+
+        # calculate amount of padding to add
+        mat_rows, mat_cols = matrix.shape
+        pad_r = size_r - mat_rows
+        pad_c = size_c - mat_cols
+
+        # account for all 4 possibilities of matrix resizing
+        if pad_r != 0 and pad_c != 0:
+            temp[:-pad_r, :-pad_c] = matrix
+        elif pad_r != 0:
+            temp[:-pad_r, :] = matrix
+        elif pad_c != 0:
+            temp[:, :-pad_c] = matrix
+        else:
+            temp = matrix
+
+        # fill in padded columns
+        for i in range(mat_cols, size_c, 1):
+            for j in range(size_r):
+                temp[j, i] = temp[j, (mat_cols-1)]
+
+        # fill in padded rows
+        for i in range(mat_cols):
+            for j in range(mat_rows, size_r, 1):
+                temp[j, i] = temp[(mat_rows-1), i]
+
+
+        for a in range(0, r, 2):
+            for b in range(c):
+                if a % 2 == 0 and b % 2 == 0:  # top left square
+                    recover[a][b] = temp[(a // 2)][(b // 2)]
+
+                elif a % 2 == 0 and b % 2 == 1:  # top right square
+                    if b == last_col:  # last column
+                        recover[a][b] = recover[a, (b - 1)]
+                    else:
+                        recover[a][b] = (recover[a][(b - 1)] + temp[(a // 2)][((b // 2) + 1)]) // 2
+
+
+        for a in range(1, r, 2):
+            for b in range(c):
+                if a % 2 == 1 and b % 2 == 0:  # bottom left square
+                    if a == last_row:  # last row, even column
+                        recover[a][b] = recover[(a - 1)][b]
+                    else:
+                        recover[a][b] = (recover[(a - 1)][b] + recover[(a + 1)][b]) // 2
+
+                elif a % 2 == 1 and b % 2 == 1:  # bottom right square
+                    if b == last_col and a == last_row:  # last row, last column
+                        recover[a][b] = recover[(a - 1)][(b - 1)]
+                    elif b == last_col:  # last column
+                        recover[a][b] = (recover[(a - 1)][(b - 1)] + recover[(a + 1)][(b - 1)]) // 2
+                    elif a == last_row:  # last row
+                        recover[a][b] = (recover[(a - 1)][(b - 1)] + recover[(a - 1)][(b + 1)]) // 2
+                    else:
+                        recover[a][b] = (((recover[(a - 1)][(b - 1)] + recover[(a + 1)][(b + 1)]) // 2)
+                                        + (recover[(a + 1)][(b - 1)] + recover[(a - 1)][(b + 1)]) // 2) // 2
+
+
+        return recover
+
     # Recouver UV values using single pass
     # WORK ON THIS
     #array[rows, cols]
@@ -167,7 +244,7 @@ class jpeg_coder:
 
 
     def yuv_merge(self, y, u, v, rows, cols):
-        merged_yuv = np.zeros((rows, cols,3), dtype=np.uint8)
+        merged_yuv = np.zeros((rows, cols,3), dtype=np.float64)
         for i in range(0,rows):
             for j in range(0,cols):
                 merged_yuv[i,j][0] = int(y[i,j])
@@ -201,29 +278,29 @@ class jpeg_coder:
                 y = matrix[i,j][0]
                 u = matrix[i,j][1]
                 v = matrix[i,j][2]
-                #if((y + (1.140*v))> 255 ):
-                #r = 255
+                
+                #if((v + y) > 255):
+                #    print('r is bigger than 255')
+                ##    r = 255
                 #else:
-                #    r = y + (1.140*v)
-                #if((y - (0.395*u) - (0.581*v)) > 255):
-                #    g = 255
-                #else:
-                #    g = y - (0.395*u) - (0.581*v)
-                #if((y + (2.032*u)) > 255):
+                #    r = v + y 
+
+                #if((u + y) > 255):
+                #    print('b is bigger than 255')
                 #    b = 255
                 #else:
-                #    b = y + (2.032*u)
-                if((v + y) > 255):
-                    r = 255
-                else:
-                    r = v + y 
-
-                if((u + y) >255):
-                    b = 255
-                else:
-                    b = u + y
-                g = (y -(0.299*r) -(0.114*b))/0.587
+                #    b = u + y
+                #if((y -(0.299*r) - (0.114*b))/0.587 > 255):
+                #    print('g is bigger than 255')
+                #    print((y -(0.299*r) - (0.114*b))/0.587)
+                #    g = 255
+                #else:
+                 #   g = (y -(0.299*r) - (0.114*b))/0.587
+                r = y + 1.4075 * (v - 128)
+                g = y - 0.3455 * (u - 128) - (0.7169 * (v - 128))
+                b = y + 1.7790 * (u - 128)
                 
+
                 rgb_matrix[i,j][0] = int(r)
                 rgb_matrix[i,j][1] = int(g)
                 rgb_matrix[i,j][2] = int(b)
@@ -560,8 +637,8 @@ class jpeg_coder:
         # recover pixels so that |J,K| == |M,N|
         #RECOUVER MAY BE THE SOURCE OF BUG
 
-        recouvered_u_matrix = self.recouver_uv(decompressed_u_pixels, rows, cols)
-        recouvered_v_matrix = self.recouver_uv(decompressed_v_pixels, rows, cols)
+        recouvered_u_matrix = self.recover_uv_v2(decompressed_u_pixels, rows, cols)
+        recouvered_v_matrix = self.recover_uv_v2(decompressed_v_pixels, rows, cols)
 
         recovered_u = Image.fromarray(recouvered_u_matrix)
         recovered_u.show()
@@ -650,7 +727,7 @@ class jpeg_coder:
 if __name__ == '__main__':
 
     jpeg = jpeg_coder(0.1)
-    jpeg.encode('./src/assets/images/lena.ppm')
+    jpeg.encode('./src/assets/images/mountain.png')
     
 
 
