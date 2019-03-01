@@ -16,6 +16,7 @@ class ImageManager extends Component{
         indexCount:4,
         imageProcessing:false,
         currentImage: "",
+        confirmedImage: "",
         currentCompressVal:1,
         confirmedCompressVal:1,
         loadingImage:false,
@@ -26,7 +27,7 @@ class ImageManager extends Component{
     currentImageHandler = (event)=>{
         const filepath = event.target.value;
         //console.log('filepath',filepath);
-        this.setState({currentImage: filepath});
+        this.setState({currentImage: filepath, confirmedImage:filepath});
         //console.log('current image',this.state.currentImage);
     } 
     
@@ -56,10 +57,12 @@ class ImageManager extends Component{
     //This will be a HTTP request for image compression later
     //Return: FILE SIZE- Before and After 
     compressAndShowImage = () =>{ 
-        this.setState({loadingImage:true, confirmedCompressVal:this.state.currentCompressVal})
+        this.setState({loadingImage:true, confirmedCompressVal:this.state.currentCompressVal, 
+            confirmedImage:this.state.currentImage })
         const images = [...this.state.images]
         const id = this.state.indexCount
-        const filePath = this.state.currentImage;
+        const filePath = this.state.confirmedImage;
+        console.log('[ImageManger.js]',filePath)
         const compression = this.state.currentCompressVal;
         if(compression > 10){
             alert('Please pick a scaling factor between 1-10');
