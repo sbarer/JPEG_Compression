@@ -18,17 +18,17 @@ def compress():
     req_data = request.get_json()
     compression_value = req_data['compression']
     file_name = req_data['filePath']
-    compression_value = int(compression_value) / int(10)
+    compression_value = float(compression_value) / 10
     print(compression_value)
-    jCoder = jpeg_coder(0.5)
+    jCoder = jpeg_coder(compression_value)
     file_name = './src/assets/images/' + str(file_name)
     sizeBefore, sizeAfter = jCoder.encode(file_name)
 
-
+    #sizeBefore, sizeAfter = 10, 20
     print(compression_value)
     print(file_name)
-    print(int(sizeBefore))
-    print(int(sizeAfter))
+    #print(int(sizeBefore))
+    #print(int(sizeAfter))
 
     data ={}
     data['fileSizeBefore'] = int(sizeBefore)

@@ -30,7 +30,7 @@ class jpeg_coder:
     # Takes an image in file_path and retuns image with rgb->yuv pixel value conversion
     def rgb_to_yuv(self,file_path):
         img = Image.open(file_path)
-        img.show()
+        #img.show()
         pixels = img.load()  # Create Pixel map
 
         width = img.size[0]
@@ -348,11 +348,11 @@ class jpeg_coder:
             v = v[0:v_height - height_padding:1, 0:v_width - width_padding:1]
 
         test_y = Image.fromarray(y)
-        test_y.show()
+        #test_y.show()
         test_u = Image.fromarray(u_test)
-        test_u.show()
+        #test_u.show()
         test_v = Image.fromarray(v_test)
-        test_v.show()
+        #test_v.show()
 
         #print('u', u)
         #print('dimensions', u.shape)
@@ -394,8 +394,7 @@ class jpeg_coder:
         c_padding = c%8
         r = r - r_padding
         c = c- c_padding
-        print('this is r outside of the loop', r)
-        print('this is c outside of the loop', c)
+        
         # iterate through comp in 8x8 blocks
         for i in range(0, r, 8):
             for j in range(0, c, 8):
@@ -556,6 +555,15 @@ class jpeg_coder:
                         [99, 99, 99, 99, 99, 99, 99, 99],
                         [99, 99, 99, 99, 99, 99, 99, 99]])
 
+        #chrome = np.array([[1, 1, 1, 1, 1, 1, 1, 1],
+        #                [1, 1, 1, 1, 1, 1, 1, 1],
+        #                [1, 1, 1, 1, 1, 1, 1, 1],
+        #                [1, 1, 1, 1, 1, 1, 1, 1],
+        #                [1, 1, 1, 1, 1, 1, 1, 1],
+        #                [1, 1, 1, 1, 1, 1, 1, 1],
+        #                [1, 1, 1, 1, 1, 1, 1, 1],
+        #                [1, 1, 1, 1, 1, 1, 1, 1]])
+
         for a in range(0, 8, 1):
             for b in range(0, 8, 1):
                 chrome[a, b] = chrome[a, b] * Q_fact
@@ -617,7 +625,7 @@ class jpeg_coder:
 
         # 4 - DCT and Quantization
         DCT_matrix = self.initialize_DCT_matrix()
-        quant_num = self.compression_val
+        quant_num = self.compression_val 
         Q_matrix_LUM = self.initialize_Q_LUM(quant_num)
         Q_matrix_CHROME = self.initialize_Q_CHROME(quant_num)
 
@@ -641,9 +649,9 @@ class jpeg_coder:
         recouvered_v_matrix = self.recover_uv_v2(decompressed_v_pixels, rows, cols)
 
         recovered_u = Image.fromarray(recouvered_u_matrix)
-        recovered_u.show()
+        #recovered_u.show()
         recovered_v = Image.fromarray(recouvered_v_matrix)
-        recovered_v.show()
+        #recovered_v.show()
 
         print('recouvered u block: ',recouvered_u_matrix[0:8,0:8])
         print('recouvered v block: ',recouvered_v_matrix[0:8,0:8])
@@ -664,7 +672,7 @@ class jpeg_coder:
         # 9 - Create an Image object from array and render
         decoded_img = Image.fromarray(image_converted_to_rgb, 'RGB')
 
-        decoded_img.show()
+        #decoded_img.show()
 
         # 10 - Save image in assets folder to render on React Page
         current_dir =  os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) # script directory
@@ -679,7 +687,6 @@ class jpeg_coder:
          ## SAVE Image into file path
         decoded_img.save(image_dir) 
 
-        #GET SIZE OF IMAGE IN BYTES
         
         print(image_dir)
         
@@ -691,43 +698,16 @@ class jpeg_coder:
         return int(before_comp_file_size/1000), int(after_comp_file_size/1000)
 
 
-        '''
-        FQ_y = DCT(y, rows, cols, DCT_matrix, Q_matrix_LUM)
-        FQ_u = DCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
-        FQ_v = DCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
-
-        iFQ_y = iDCT(y, rows, cols, DCT_matrix, Q_matrix_LUM)
-        iFQ_u = iDCT(u, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
-        iFQ_v = iDCT(v, uv_rows, uv_cols, DCT_matrix, Q_matrix_CHROME)
-
-        E_y = error(test, FQ_test2, rows, cols)
-        E_u = error(test, FQ_test2, uv_rows, uv_cols)
-        E_v = error(test, FQ_test2, uv_rows, uv_cols)
-        '''
-
-
-        #R = recover_uv(test, 8, 8)
-        #print(R)
-
-        ### CHROMOSUBSAMPLING
-        ## How do to the 4:2:0 subsampling
-
-        # img = Image.fromarray(block, 'RGB')
-        # print(block)
-        # img.show()
-        # ss_image.show()
-
-
-
-
-
-
-
 # Checks to see if this is the main module being run
 if __name__ == '__main__':
+    # for i in range(1,11,1):
+    #     compress = float(float(i)/10)
+    #     print(compress)
+    #     jpeg = jpeg_coder(compress)
+    #     jpeg.encode('./src/assets/images/piglet.jpg')
 
-    jpeg = jpeg_coder(0.1)
-    jpeg.encode('./src/assets/images/mountain.png')
+    jpeg = jpeg_coder(10)
+    jpeg.encode('./src/assets/images/piglet.jpg')
     
 
 
