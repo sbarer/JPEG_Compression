@@ -27,10 +27,9 @@ class jpeg_coder:
 
         return input_file_path, output_file_path
 
-    # Takes an image in file_path and retuns image with rgb->yuv pixel value conversion
+    # Takes an image in file_path and returns image with rgb->yuv pixel value conversion
     def rgb_to_yuv(self,file_path):
         img = Image.open(file_path)
-        #img.show()
         pixels = img.load()  # Create Pixel map
 
         width = img.size[0]
@@ -56,21 +55,14 @@ class jpeg_coder:
                 r = pixels[i, j][0]
                 g = pixels[i, j][1]
                 b = pixels[i, j][2]
-                #y = (0.299*r) + (0.587*g) + (0.114*b)
-                #u = 0.492* (b-y)
-                #v = 0.877 * (r-y)
-                #u = (-0.299*r) - (0.587*g) + (0.886*b) 
-                #v = (0.701* r) - (0.587*g) - (0.114*b)
                 y = r *  .299000 + g *  .587000 + b *  .114000
                 u = r * -.168736 + g * -.331264 + b *  .500000 + 128
                 v = r *  .500000 + g * -.418688 + b * -.081312 + 128
                 pixels[i,j] = (int(y),int(u),int(v))
-        #img.show()
         return img
 
     def recover_uv(self, matrix, r, c):
-    # r & c are the dimensions of the Y matrix, as u&v may have been truncated
-
+        # r & c are the dimensions of the Y matrix, as u&v may have been truncated
         recover = np.empty([r, c])
 
         for a in range(0, r, 2):
@@ -106,7 +98,7 @@ class jpeg_coder:
         return recover
 
     def recover_uv_v2(self, matrix, r, c):
-    # r & c are the dimensions of the Y matrix, as u&v may have been truncated
+        # r & c are the dimensions of the Y matrix, as u&v may have been truncated
         recover = np.empty([r, c])
 
         # calculate size of new temp array
@@ -176,72 +168,6 @@ class jpeg_coder:
 
         return recover
 
-    # Recouver UV values using single pass
-    # WORK ON THIS
-    #array[rows, cols]
-    # rows, cols = array.shape
-    def recouver_uv(self, small, lrows,lcols):
-        rows, cols = small.shape
-        large = np.zeros((lrows,lcols), dtype=np.uint8)
-        lrows, lcols = large.shape
-
-        col_padding = abs(lcols - (cols * 2))
-        row_padding = abs(lrows - (rows * 2))
-        #print('col_padding: ',col_padding)
-        #print('row_padding: ' ,row_padding)
-        r = lrows -row_padding
-        c = lcols -col_padding
-        #Initial fill of large matrix
-        for i in range(0,r):
-            for j in range(0,c):
-                #print(i,j)
-                if (i % 2 ==0 and j %2 ==0):    #top left corner
-                    #print('i,j:',i,j)
-                    #print('padding values: ',row_padding,col_padding)
-                    #print('dimensions: ',r,c)
-                    large[i,j] = small[i/2,j/2]
-                
-            
-        #first interpolation pass
-        last_col = lcols-1
-        #print('this is last col', last_col)
-        for i in range(0,lrows,2):
-            for j in range(0,lcols):
-                #print(i,j)
-                if (i % 2 ==0 and j %2 ==0): 
-                    pass
-                else:    
-                    if(j==int((last_col))):   #if the current element is at the very last colum
-                        large[i,j] = large[i,j-1]
-                    else:
-                        #print(i,j)
-                        avg_val = (large[i,j-1])/2 + (large[i, j+1])/2  #avg val of two columns
-                        avg_val = round(avg_val)
-                        large[i,j] = avg_val
-
-        #print(large)
-                    
-        #second interpolation pass
-        last_row = lrows - 1
-        for i in range(1,lrows,2):
-            for j in range(0,lcols):
-                if(i== last_row):
-                    large[i,j] = large[i-1,j]
-                else:
-                    avg_val = (large[i-1,j])/2 + (large[i+1,j])/2
-                    avg_val = round(avg_val)
-                    large[i,j] = avg_val
-
-        #input small array values into large array 
-
-
-
-        #print('small', small)
-        #print('large', large)
-        #print(rows, cols)
-        return large
-        
-
 
     def yuv_merge(self, y, u, v, rows, cols):
         merged_yuv = np.zeros((rows, cols,3), dtype=np.float64)
@@ -254,20 +180,6 @@ class jpeg_coder:
         return merged_yuv
 
 
-    def yuv_to_rgb(self, matrix):
-        rgb_converter = np.array([[1.0, 1.0, 1.0],
-                    [-0.000007154783816076815, -0.3441331386566162, 1.7720025777816772],
-                    [1.4019975662231445, -0.7141380310058594, 0.00001542569043522235]])
-
-        rgb_matrix = np.dot(matrix, rgb_converter)
-        rgb_matrix[:, :, 0] -= 179.45477266423404
-        rgb_matrix[:, :, 1] += 135.45870971679688
-        rgb_matrix[:, :, 2] -= 226.8183044444304
-
-        return rgb_matrix
-        
-    #TODO: write the converter
-    #TODO: write the converter
     def yuv_to_rgb2(self, matrix):
         row, col, depth = matrix.shape
         #img = Image.fromarray(matrix, 'RGB')
@@ -279,27 +191,32 @@ class jpeg_coder:
                 u = matrix[i,j][1]
                 v = matrix[i,j][2]
                 
-                #if((v + y) > 255):
-                #    print('r is bigger than 255')
-                ##    r = 255
-                #else:
-                #    r = v + y 
+                if((v + y) > 255):
+                   print('r is bigger than 255')
+                   r = 255
+                elif ((v + y) < 0):
+                    print('r is Less than 0')
+                    r = 0
+                else:
+                   r = v + y
 
-                #if((u + y) > 255):
-                #    print('b is bigger than 255')
-                #    b = 255
-                #else:
-                #    b = u + y
-                #if((y -(0.299*r) - (0.114*b))/0.587 > 255):
-                #    print('g is bigger than 255')
-                #    print((y -(0.299*r) - (0.114*b))/0.587)
-                #    g = 255
-                #else:
-                 #   g = (y -(0.299*r) - (0.114*b))/0.587
-                r = y + 1.4075 * (v - 128)
-                g = y - 0.3455 * (u - 128) - (0.7169 * (v - 128))
-                b = y + 1.7790 * (u - 128)
-                
+                if((u + y) > 255):
+                   print('b is bigger than 255')
+                   b = 255
+                elif ((u + y) < 0):
+                    print('b is Less than 0')
+                    b = 0
+                else:
+                   b = u + y
+
+                if((y -(0.299*r) - (0.114*b))/0.587 > 255):
+                    print('g is bigger than 255')
+                    g = 255
+                elif ((y - (0.299 * r) - (0.114 * b)) / 0.587 < 0):
+                    print('g is less than 0')
+                    g = 0
+                else:
+                   g = (y -(0.299*r) - (0.114*b))/0.587
 
                 rgb_matrix[i,j][0] = int(r)
                 rgb_matrix[i,j][1] = int(g)
@@ -554,15 +471,6 @@ class jpeg_coder:
                         [99, 99, 99, 99, 99, 99, 99, 99],
                         [99, 99, 99, 99, 99, 99, 99, 99],
                         [99, 99, 99, 99, 99, 99, 99, 99]])
-
-        #chrome = np.array([[1, 1, 1, 1, 1, 1, 1, 1],
-        #                [1, 1, 1, 1, 1, 1, 1, 1],
-        #                [1, 1, 1, 1, 1, 1, 1, 1],
-        #                [1, 1, 1, 1, 1, 1, 1, 1],
-        #                [1, 1, 1, 1, 1, 1, 1, 1],
-        #                [1, 1, 1, 1, 1, 1, 1, 1],
-        #                [1, 1, 1, 1, 1, 1, 1, 1],
-        #                [1, 1, 1, 1, 1, 1, 1, 1]])
 
         for a in range(0, 8, 1):
             for b in range(0, 8, 1):
